@@ -80,7 +80,7 @@ const Stations = {
     GARMENT_TYPES.forEach(g => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.garmentType === g.id ? ' active' : '');
-      cell.innerHTML = `<div style="text-align:center"><div style="font-size:28px">${g.emoji}</div><div style="font-size:10px;color:var(--text-muted)">${g.name}</div></div>`;
+      cell.innerHTML = `<div style="text-align:center"><div>${Icons.get(g.id, 28)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${g.name}</div></div>`;
       cell.onclick = () => {
         this.garmentType = g.id;
         grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));
@@ -380,7 +380,7 @@ const Stations = {
   _renderCutStep() {
     const tools = document.getElementById('studio-tools');
     tools.innerHTML = `
-      <button class="tool-btn active" title="Scissors">✂️</button>
+      <button class="tool-btn active" title="Scissors">${Icons.get('scissors')}</button>
     `;
 
     const side = document.getElementById('studio-side');
@@ -417,19 +417,19 @@ const Stations = {
     tools.innerHTML = '';
 
     const toolList = [
-      { id: 'dye', icon: '🎨', label: 'Dye' },
-      { id: 'fill', icon: '🪣', label: 'Fill' },
-      { id: 'glitter', icon: '✨', label: 'Glitter' },
-      { id: 'sticker', icon: '⭐', label: 'Sticker' },
-      { id: 'badge', icon: '🏅', label: 'Badge' },
-      { id: 'pearl', icon: '🫧', label: 'Pearl' },
-      { id: 'eraser', icon: '🧹', label: 'Eraser' },
+      { id: 'dye', icon: 'palette', label: 'Dye' },
+      { id: 'fill', icon: 'bucket', label: 'Fill' },
+      { id: 'glitter', icon: 'sparkles', label: 'Glitter' },
+      { id: 'sticker', icon: 'star', label: 'Sticker' },
+      { id: 'badge', icon: 'medal', label: 'Badge' },
+      { id: 'pearl', icon: 'bubbles', label: 'Pearl' },
+      { id: 'eraser', icon: 'eraser', label: 'Eraser' },
     ];
 
     toolList.forEach(t => {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (Tools.currentTool === t.id ? ' active' : '');
-      btn.innerHTML = `${t.icon}<span class="tool-label">${t.label}</span>`;
+      btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
       btn.onclick = () => {

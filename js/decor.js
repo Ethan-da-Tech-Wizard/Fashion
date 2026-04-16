@@ -28,20 +28,20 @@ const Decor = {
     tools.innerHTML = '';
 
     const toolList = [
-      { id: 'pick', icon: '🛋️', label: 'Item' },
-      { id: 'fabric', icon: '🧵', label: 'Fabric' },
-      { id: 'pattern', icon: '🔲', label: 'Pattern' },
-      { id: 'dye', icon: '🎨', label: 'Paint' },
-      { id: 'sticker', icon: '⭐', label: 'Sticker' },
-      { id: 'glitter', icon: '✨', label: 'Glitter' },
-      { id: 'extras', icon: '🎀', label: 'Extras' },
-      { id: 'eraser', icon: '🧹', label: 'Eraser' },
+      { id: 'pick', icon: 'decor', label: 'Item' },
+      { id: 'fabric', icon: 'fabric', label: 'Fabric' },
+      { id: 'pattern', icon: 'square', label: 'Pattern' },
+      { id: 'dye', icon: 'palette', label: 'Paint' },
+      { id: 'sticker', icon: 'star', label: 'Sticker' },
+      { id: 'glitter', icon: 'sparkles', label: 'Glitter' },
+      { id: 'extras', icon: 'bow', label: 'Extras' },
+      { id: 'eraser', icon: 'eraser', label: 'Eraser' },
     ];
 
     toolList.forEach((t, i) => {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
-      btn.innerHTML = `${t.icon}<span class="tool-label">${t.label}</span>`;
+      btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
       btn.onclick = () => {
@@ -91,10 +91,10 @@ const Decor = {
 
     const grid = document.createElement('div');
     grid.className = 'item-grid';
-    DECOR_TYPES.forEach(d => {
+      DECOR_TYPES.forEach(d => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.decorType === d.id ? ' active' : '');
-      cell.innerHTML = `<div style="text-align:center"><div style="font-size:24px">${d.emoji}</div><div style="font-size:10px;color:var(--text-muted)">${d.name}</div></div>`;
+      cell.innerHTML = `<div style="text-align:center"><div>${Icons.get(d.id, 24)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${d.name}</div></div>`;
       cell.onclick = () => {
         this.decorType = d.id;
         grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));

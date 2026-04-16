@@ -24,19 +24,19 @@ const Tech = {
     tools.innerHTML = '';
 
     const toolList = [
-      { id: 'pick', icon: '📱', label: 'Device' },
-      { id: 'color', icon: '🎨', label: 'Color' },
-      { id: 'spray', icon: '🔫', label: 'Spray' },
-      { id: 'sticker', icon: '⭐', label: 'Sticker' },
-      { id: 'glitter', icon: '✨', label: 'Glitter' },
-      { id: 'dye', icon: '🖌️', label: 'Paint' },
-      { id: 'eraser', icon: '🧹', label: 'Eraser' },
+      { id: 'pick', icon: 'tech', label: 'Device' },
+      { id: 'color', icon: 'palette', label: 'Color' },
+      { id: 'spray', icon: 'brush', label: 'Spray' },
+      { id: 'sticker', icon: 'star', label: 'Sticker' },
+      { id: 'glitter', icon: 'sparkles', label: 'Glitter' },
+      { id: 'dye', icon: 'brush', label: 'Paint' },
+      { id: 'eraser', icon: 'eraser', label: 'Eraser' },
     ];
 
     toolList.forEach((t, i) => {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
-      btn.innerHTML = `${t.icon}<span class="tool-label">${t.label}</span>`;
+      btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
       btn.onclick = () => {
@@ -64,7 +64,7 @@ const Tech = {
       DEVICE_TYPES.forEach(d => {
         const cell = document.createElement('div');
         cell.className = 'item-cell' + (this.deviceType === d.id ? ' active' : '');
-        cell.innerHTML = `<div style="text-align:center"><div style="font-size:26px">${d.emoji}</div><div style="font-size:10px;color:var(--text-muted)">${d.name}</div></div>`;
+        cell.innerHTML = `<div style="text-align:center"><div>${Icons.get(d.id, 26)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${d.name}</div></div>`;
         cell.onclick = () => {
           this.deviceType = d.id;
           grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));

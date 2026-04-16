@@ -28,18 +28,18 @@ const Books = {
     tools.innerHTML = '';
 
     const toolList = [
-      { id: 'create', icon: '📖', label: 'Create' },
-      { id: 'cover', icon: '🎨', label: 'Cover' },
-      { id: 'decorate', icon: '✨', label: 'Decorate' },
-      { id: 'sticker', icon: '⭐', label: 'Sticker' },
-      { id: 'title', icon: '✏️', label: 'Title' },
-      { id: 'random', icon: '🎲', label: 'Random' },
+      { id: 'create', icon: 'books', label: 'Create' },
+      { id: 'cover', icon: 'palette', label: 'Cover' },
+      { id: 'decorate', icon: 'sparkles', label: 'Decorate' },
+      { id: 'sticker', icon: 'star', label: 'Sticker' },
+      { id: 'title', icon: 'edit', label: 'Title' },
+      { id: 'random', icon: 'dice', label: 'Random' },
     ];
 
     toolList.forEach((t, i) => {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
-      btn.innerHTML = `${t.icon}<span class="tool-label">${t.label}</span>`;
+      btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
       btn.onclick = () => {
@@ -84,7 +84,7 @@ const Books = {
     BOOK_GENRES.forEach(g => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.bookGenre === g ? ' active' : '');
-      cell.innerHTML = `<div style="text-align:center"><div style="font-size:20px">${genreEmojis[g]||'📚'}</div><div style="font-size:9px;color:var(--text-muted)">${g}</div></div>`;
+      cell.innerHTML = `<div style="text-align:center"><div>${Icons.get('books', 20)}</div><div style="font-size:9px;color:var(--text-muted);margin-top:4px;">${g}</div></div>`;
       cell.onclick = () => {
         this.bookGenre = g;
         grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));
@@ -433,18 +433,6 @@ const Books = {
       ctx.arc(ox, oy, 3, 0, Math.PI*2);
       ctx.fill();
     });
-
-    // Genre icon
-    const genreEmojis = {
-      Fantasy: '🧙', Romance: '💕', Mystery: '🔍', 'Sci-Fi': '🚀',
-      Adventure: '⛰️', Cooking: '🍳', Art: '🎨', Poetry: '📝',
-      Comics: '💥', Fashion: '👗'
-    };
-    const emoji = genreEmojis[this.bookGenre] || '📚';
-    ctx.font = '42px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(emoji, cx + 4, cy - 20);
 
     // Title
     if (this.bookTitle) {

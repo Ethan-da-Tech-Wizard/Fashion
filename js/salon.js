@@ -33,19 +33,19 @@ const Salon = {
     tools.innerHTML = '';
 
     const toolList = [
-      { id: 'style', icon: '✂️', label: 'Style' },
-      { id: 'dye', icon: '🎨', label: 'Dye' },
-      { id: 'highlights', icon: '🖌️', label: 'Highlights' },
-      { id: 'tinsel', icon: '✨', label: 'Tinsel' },
-      { id: 'accessories', icon: '🎀', label: 'Clips' },
-      { id: 'freehand', icon: '🖊️', label: 'Draw' },
-      { id: 'eraser', icon: '🧹', label: 'Undo' },
+      { id: 'style', icon: 'scissors', label: 'Style' },
+      { id: 'dye', icon: 'palette', label: 'Dye' },
+      { id: 'highlights', icon: 'brush', label: 'Highlights' },
+      { id: 'tinsel', icon: 'sparkles', label: 'Tinsel' },
+      { id: 'accessories', icon: 'bow', label: 'Clips' },
+      { id: 'freehand', icon: 'pen', label: 'Draw' },
+      { id: 'eraser', icon: 'eraser', label: 'Undo' },
     ];
 
     toolList.forEach((t, i) => {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
-      btn.innerHTML = `${t.icon}<span class="tool-label">${t.label}</span>`;
+      btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
       btn.onclick = () => {
@@ -101,12 +101,21 @@ const Salon = {
 
     const grid = document.createElement('div');
     grid.className = 'item-grid';
-    const hairEmojis = { bob:'✂️', long:'👩', pixie:'💇', curly:'🌀', braids:'🎀', ponytail:'👧',
-      buns:'🍡', mohawk:'⚡', wavy:'〰️', afro:'🟤', straight:'📏', sidepart:'↗️' };
     HAIR_STYLES.forEach(h => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.hairStyle === h ? ' active' : '');
-      cell.innerHTML = `<div style="text-align:center"><div style="font-size:22px">${hairEmojis[h]||'💇'}</div><div style="font-size:9px;color:var(--text-muted)">${h}</div></div>`;
+      
+      const mc = document.createElement('canvas');
+      mc.width = 36; mc.height = 36;
+      mc.style.display = 'block'; mc.style.margin = '0 auto';
+      if (window.Character) Character._drawMiniHairPreview(mc.getContext('2d'), h, 18, 18, this.hairColor);
+      
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:9px;color:var(--text-muted);text-align:center;margin-top:4px;';
+      lbl.textContent = h;
+      
+      cell.appendChild(mc);
+      cell.appendChild(lbl);
       cell.onclick = () => {
         this.hairStyle = h;
         grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));

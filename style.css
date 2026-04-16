@@ -27,6 +27,20 @@
   --transition: .25s cubic-bezier(.4,0,.2,1);
 }
 
+/* ===== ICONS ===== */
+.fashion-icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+.btn-icon-inline {
+  margin-right: 8px;
+  vertical-align: text-bottom;
+}
+.ui-icon {
+  margin-right: 4px;
+  vertical-align: text-bottom;
+}
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {

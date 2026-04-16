@@ -42,21 +42,21 @@ const Makeup = {
     tools.innerHTML = '';
 
     const toolList = [
-      { id: 'blush', icon: '🌸', label: 'Blush' },
-      { id: 'shadow', icon: '🎨', label: 'Shadow' },
-      { id: 'lipstick', icon: '💄', label: 'Lips' },
-      { id: 'liner', icon: '🖊️', label: 'Liner' },
-      { id: 'lashes', icon: '👁️', label: 'Lashes' },
-      { id: 'highlight', icon: '✨', label: 'Glow' },
-      { id: 'custom', icon: '🧪', label: 'Custom' },
-      { id: 'freehand', icon: '🖌️', label: 'Paint' },
-      { id: 'eraser', icon: '🧹', label: 'Reset' },
+      { id: 'blush', icon: 'face', label: 'Blush' },
+      { id: 'shadow', icon: 'palette', label: 'Shadow' },
+      { id: 'lipstick', icon: 'lipstick', label: 'Lips' },
+      { id: 'liner', icon: 'pen', label: 'Liner' },
+      { id: 'lashes', icon: 'lashes', label: 'Lashes' },
+      { id: 'highlight', icon: 'sparkles', label: 'Glow' },
+      { id: 'custom', icon: 'wand', label: 'Custom' },
+      { id: 'freehand', icon: 'brush', label: 'Paint' },
+      { id: 'eraser', icon: 'eraser', label: 'Reset' },
     ];
 
     toolList.forEach((t, i) => {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
-      btn.innerHTML = `${t.icon}<span class="tool-label">${t.label}</span>`;
+      btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
       btn.onclick = () => {
