@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fashion — Design & Style Game</title>
+  <meta name="description" content="Create characters, design clothes, style hair, do makeup, and build your fashion empire!">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="weather-canvas"></canvas>
+
+  <!-- ===== MAIN MENU ===== -->
+  <div id="menu-screen" class="screen active">
+    <div class="menu-container">
+      <h1 class="game-title">✨ Fashion ✨</h1>
+      <p class="game-subtitle">Design · Style · Create</p>
+      <div class="menu-buttons">
+        <button id="btn-new-game" class="btn btn-primary btn-lg" onclick="Game.newGame()">✂️ New Game</button>
+        <button id="btn-continue" class="btn btn-secondary btn-lg" onclick="Game.continueGame()">👗 Continue</button>
+        <button id="btn-settings" class="btn btn-ghost btn-lg" onclick="Game.showSettings()">⚙️ Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHARACTER CREATOR ===== -->
+  <div id="character-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('menu')">← Back</button>
+      <h2>Create Your Character</h2>
+      <button class="btn btn-primary" onclick="Game.finishCharacter()">Done ✓</button>
+    </div>
+    <div class="creator-layout">
+      <div class="creator-panel" id="creator-options">
+        <div class="panel-section">
+          <h3>Face Shape</h3>
+          <div class="option-row" id="face-shapes"></div>
+        </div>
+        <div class="panel-section">
+          <h3>Skin Tone</h3>
+          <div id="skin-color-pick" class="color-pick-btn" onclick="ColorWheel.open('skin')"></div>
+        </div>
+        <div class="panel-section">
+          <h3>Hair Style</h3>
+          <div class="option-row scrollable" id="hair-styles"></div>
+        </div>
+        <div class="panel-section">
+          <h3>Hair Color</h3>
+          <div id="hair-color-pick" class="color-pick-btn" onclick="ColorWheel.open('hair')"></div>
+        </div>
+        <div class="panel-section">
+          <h3>Eye Shape</h3>
+          <div class="option-row" id="eye-shapes"></div>
+        </div>
+        <div class="panel-section">
+          <h3>Eye Color</h3>
+          <div id="eye-color-pick" class="color-pick-btn" onclick="ColorWheel.open('eyes')"></div>
+        </div>
+        <div class="panel-section">
+          <button class="btn btn-accent btn-sm" onclick="Character.randomize()">🎲 Random</button>
+          <button class="btn btn-accent btn-sm" onclick="Character.mystery()">❓ Mystery</button>
+        </div>
+      </div>
+      <canvas id="character-canvas" width="400" height="600"></canvas>
+    </div>
+  </div>
+
+  <!-- ===== WORKSHOP HUB ===== -->
+  <div id="workshop-screen" class="screen">
+    <div class="screen-header">
+      <div class="header-left">
+        <button class="btn btn-back" onclick="Game.goTo('menu')">← Menu</button>
+        <span class="level-badge" id="level-badge">Lv 1</span>
+        <span class="xp-text" id="xp-text">0 XP</span>
+      </div>
+      <h2>Workshop</h2>
+      <div class="header-right">
+        <span class="coins-badge" id="workshop-coins">🪙 0</span>
+        <button class="btn btn-icon" onclick="Weather.cycle()" title="Change Weather" id="weather-btn">☀️</button>
+        <button class="btn btn-icon" onclick="Game.goTo('closet')" title="Closet">🗄️</button>
+        <button class="btn btn-icon" onclick="Game.goTo('customers')" title="Customers">🛍️</button>
+      </div>
+    </div>
+    <div class="workshop-grid">
+      <button class="workshop-card" onclick="Game.goTo('studio')" id="card-studio">
+        <span class="card-icon">👗</span><span class="card-label">Fashion Studio</span>
+        <span class="card-desc">Design clothes & accessories</span>
+      </button>
+      <button class="workshop-card" onclick="Game.goTo('salon')" id="card-salon">
+        <span class="card-icon">💇</span><span class="card-label">Hair Salon</span>
+        <span class="card-desc">Cut, dye & style hair</span>
+      </button>
+      <button class="workshop-card" onclick="Game.goTo('makeup')" id="card-makeup">
+        <span class="card-icon">💄</span><span class="card-label">Makeup Studio</span>
+        <span class="card-desc">Blush, shadow & lipstick</span>
+      </button>
+      <button class="workshop-card" onclick="Game.goTo('tech')" id="card-tech">
+        <span class="card-icon">📱</span><span class="card-label">Tech Workshop</span>
+        <span class="card-desc">Phones, tablets & AirPods</span>
+      </button>
+      <button class="workshop-card" onclick="Game.goTo('decor')" id="card-decor">
+        <span class="card-icon">🛋️</span><span class="card-label">Home Decor</span>
+        <span class="card-desc">Blankets, pillows & rugs</span>
+      </button>
+      <button class="workshop-card" onclick="Game.goTo('books')" id="card-books">
+        <span class="card-icon">📚</span><span class="card-label">Book Shop</span>
+        <span class="card-desc">Create & sell books</span>
+      </button>
+    </div>
+    <div class="workshop-bottom">
+      <button class="btn btn-accent freestyle-btn" onclick="Game.startFreestyle()">
+        🎲 Freestyle Challenge
+      </button>
+      <button class="btn btn-ghost" onclick="Game.goTo('character')" style="font-size:12px;">
+        ✏️ Edit Character
+      </button>
+    </div>
+    <div class="workshop-character-preview">
+      <canvas id="workshop-char-canvas" width="200" height="300"></canvas>
+    </div>
+  </div>
+
+  <!-- ===== FASHION STUDIO ===== -->
+  <div id="studio-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2 id="studio-title">Fashion Studio</h2>
+      <div class="studio-steps" id="studio-steps">
+        <span class="step active" data-step="type">Type</span>
+        <span class="step" data-step="fabric">Fabric</span>
+        <span class="step" data-step="cut">Cut</span>
+        <span class="step" data-step="decorate">Decorate</span>
+        <span class="step" data-step="preview">Preview</span>
+      </div>
+    </div>
+    <div class="studio-layout">
+      <div class="tool-panel" id="studio-tools"></div>
+      <canvas id="studio-canvas" width="600" height="500"></canvas>
+      <div class="side-panel" id="studio-side"></div>
+    </div>
+    <div class="studio-footer">
+      <button class="btn btn-secondary" id="studio-prev" onclick="Stations.prevStep()">← Prev</button>
+      <button class="btn btn-primary" id="studio-next" onclick="Stations.nextStep()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ===== HAIR SALON ===== -->
+  <div id="salon-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2>Hair Salon</h2>
+      <button class="btn btn-primary" onclick="Salon.finish()">Done ✓</button>
+    </div>
+    <div class="studio-layout">
+      <div class="tool-panel" id="salon-tools"></div>
+      <canvas id="salon-canvas" width="600" height="500"></canvas>
+      <div class="side-panel" id="salon-side"></div>
+    </div>
+  </div>
+
+  <!-- ===== MAKEUP STUDIO ===== -->
+  <div id="makeup-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2>Makeup Studio</h2>
+      <button class="btn btn-primary" onclick="Makeup.finish()">Done ✓</button>
+    </div>
+    <div class="studio-layout">
+      <div class="tool-panel" id="makeup-tools"></div>
+      <canvas id="makeup-canvas" width="600" height="500"></canvas>
+      <div class="side-panel" id="makeup-side"></div>
+    </div>
+  </div>
+
+  <!-- ===== TECH WORKSHOP ===== -->
+  <div id="tech-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2>Tech Workshop</h2>
+      <button class="btn btn-primary" onclick="Tech.finish()">Done ✓</button>
+    </div>
+    <div class="studio-layout">
+      <div class="tool-panel" id="tech-tools"></div>
+      <canvas id="tech-canvas" width="600" height="500"></canvas>
+      <div class="side-panel" id="tech-side"></div>
+    </div>
+  </div>
+
+  <!-- ===== HOME DECOR ===== -->
+  <div id="decor-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2>Home Decor</h2>
+      <button class="btn btn-primary" onclick="Decor.finish()">Done ✓</button>
+    </div>
+    <div class="studio-layout">
+      <div class="tool-panel" id="decor-tools"></div>
+      <canvas id="decor-canvas" width="600" height="500"></canvas>
+      <div class="side-panel" id="decor-side"></div>
+    </div>
+  </div>
+
+  <!-- ===== BOOK SHOP ===== -->
+  <div id="books-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2>Book Shop</h2>
+      <button class="btn btn-primary" onclick="Books.finish()">Done ✓</button>
+    </div>
+    <div class="studio-layout">
+      <div class="tool-panel" id="books-tools"></div>
+      <canvas id="books-canvas" width="600" height="500"></canvas>
+      <div class="side-panel" id="books-side"></div>
+    </div>
+  </div>
+
+  <!-- ===== CLOSET ===== -->
+  <div id="closet-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2>My Closet</h2>
+      <div class="closet-tabs">
+        <button class="tab active" onclick="Closet.filterTab('all')">All</button>
+        <button class="tab" onclick="Closet.filterTab('clothes')">👗</button>
+        <button class="tab" onclick="Closet.filterTab('hair')">💇</button>
+        <button class="tab" onclick="Closet.filterTab('makeup')">💄</button>
+        <button class="tab" onclick="Closet.filterTab('tech')">📱</button>
+        <button class="tab" onclick="Closet.filterTab('decor')">🛋️</button>
+        <button class="tab" onclick="Closet.filterTab('books')">📚</button>
+      </div>
+    </div>
+    <div class="closet-grid" id="closet-grid"></div>
+  </div>
+
+  <!-- ===== CUSTOMERS ===== -->
+  <div id="customers-screen" class="screen">
+    <div class="screen-header">
+      <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
+      <h2>Customers</h2>
+      <span class="coins-display" id="coins-display">🪙 0</span>
+    </div>
+    <div class="customers-layout">
+      <div class="customer-queue" id="customer-queue"></div>
+      <div class="customer-detail" id="customer-detail">
+        <p class="empty-msg">Customers are on their way! Complete designs to attract them.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LEVEL UP ===== -->
+  <div id="levelup-screen" class="screen">
+    <div class="levelup-container">
+      <div class="levelup-stars">⭐✨⭐</div>
+      <h1 class="levelup-title" id="levelup-title">Level Up!</h1>
+      <p class="levelup-level" id="levelup-level">Level 2</p>
+      <div class="levelup-unlocks" id="levelup-unlocks"></div>
+      <button class="btn btn-primary btn-lg" onclick="Game.goTo('workshop')">Continue →</button>
+    </div>
+  </div>
+
+  <!-- ===== COLOR WHEEL MODAL ===== -->
+  <div id="colorwheel-modal" class="modal">
+    <div class="modal-content colorwheel-content">
+      <div class="modal-header">
+        <h3 id="cw-title">Pick a Color</h3>
+        <button class="btn btn-icon" onclick="ColorWheel.close()">✕</button>
+      </div>
+      <div class="cw-layout">
+        <canvas id="cw-canvas" width="280" height="280"></canvas>
+        <div class="cw-controls">
+          <label>Brightness</label>
+          <input type="range" id="cw-brightness" min="0" max="100" value="50" oninput="ColorWheel.update()">
+          <label>Saturation</label>
+          <input type="range" id="cw-saturation" min="0" max="100" value="100" oninput="ColorWheel.update()">
+          <div class="cw-preview" id="cw-preview"></div>
+          <input type="text" id="cw-hex" class="cw-hex-input" value="#FF69B4" oninput="ColorWheel.fromHex()">
+          <div class="cw-recent" id="cw-recent"></div>
+          <div class="cw-presets" id="cw-presets"></div>
+          <button class="btn btn-primary" onclick="ColorWheel.confirm()">Select Color</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS MODAL ===== -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button class="btn btn-icon" onclick="Game.closeSettings()">✕</button>
+      </div>
+      <div class="settings-list">
+        <div class="setting-row">
+          <span>Weather</span>
+          <select id="setting-weather" onchange="Weather.set(this.value)">
+            <option value="sunny">☀️ Sunny</option>
+            <option value="rainy">🌧️ Rainy</option>
+            <option value="snowy">❄️ Snowy</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <span>Sound Effects</span>
+          <label class="toggle"><input type="checkbox" id="setting-sound" checked onchange="Sound.toggle()"><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <button class="btn btn-danger" onclick="Game.resetGame()">Reset Game</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/colorwheel.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/character.js"></script>
+  <script src="js/tools.js"></script>
+  <script src="js/stations.js"></script>
+  <script src="js/salon.js"></script>
+  <script src="js/makeup.js"></script>
+  <script src="js/tech.js"></script>
+  <script src="js/decor.js"></script>
+  <script src="js/books.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
