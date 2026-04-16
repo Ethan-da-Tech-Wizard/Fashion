@@ -328,40 +328,81 @@ const Game = {
       // Mini character canvas
       const miniCanvas = document.createElement('canvas');
       miniCanvas.width = 60;
-      miniCanvas.height = 70;
+      miniCanvas.height = 75;
       miniCanvas.style.cssText = 'margin:0 auto 4px;display:block;';
       card.appendChild(miniCanvas);
 
       // Draw mini character
       const mctx = miniCanvas.getContext('2d');
       if (isMystery) {
-        // Mystery silhouette
-        mctx.fillStyle = '#9370DB';
-        mctx.beginPath(); mctx.arc(30, 22, 16, 0, Math.PI*2); mctx.fill();
-        mctx.fillRect(22, 35, 16, 20);
+        // Mystery silhouette — gradient purple
+        const mg = mctx.createLinearGradient(30, 5, 30, 65);
+        mg.addColorStop(0, '#b36bff'); mg.addColorStop(1, '#6c3fa0');
+        mctx.fillStyle = mg;
+        mctx.beginPath(); mctx.arc(30, 22, 15, 0, Math.PI*2); mctx.fill();
+        mctx.beginPath();
+        mctx.moveTo(20, 34); mctx.quadraticCurveTo(17, 55, 20, 62);
+        mctx.lineTo(40, 62); mctx.quadraticCurveTo(43, 55, 40, 34);
+        mctx.closePath(); mctx.fill();
+        // Question mark
         mctx.fillStyle = '#FFD700';
-        mctx.font = '18px serif'; mctx.textAlign = 'center';
+        mctx.font = 'bold 16px Fredoka'; mctx.textAlign = 'center';
         mctx.fillText('?', 30, 28);
+        // Sparkles
+        mctx.fillStyle = '#FFD700'; mctx.globalAlpha = 0.7;
+        mctx.beginPath(); mctx.arc(14, 12, 2, 0, Math.PI*2); mctx.fill();
+        mctx.beginPath(); mctx.arc(46, 18, 1.5, 0, Math.PI*2); mctx.fill();
+        mctx.globalAlpha = 1;
       } else {
+        const topColor = U.pick(['#FF69B4','#1E90FF','#FFD700','#32CD32','#9370DB','#FF6347','#00CED1','#ff6eb4','#b36bff']);
+        // Body
+        mctx.fillStyle = topColor;
+        mctx.beginPath();
+        mctx.moveTo(21, 36); mctx.quadraticCurveTo(18, 50, 20, 62);
+        mctx.quadraticCurveTo(30, 66, 40, 62);
+        mctx.quadraticCurveTo(42, 50, 39, 36);
+        mctx.closePath(); mctx.fill();
+        // Body shading
+        mctx.fillStyle = 'rgba(0,0,0,0.08)';
+        mctx.beginPath(); mctx.ellipse(28, 52, 5, 10, 0, 0, Math.PI*2); mctx.fill();
+        // Hair back
+        if (['long','straight','wavy'].includes(U.pick(HAIR_STYLES))) {
+          mctx.fillStyle = hairColor;
+          mctx.beginPath();
+          mctx.moveTo(16, 18); mctx.quadraticCurveTo(14, 40, 18, 55);
+          mctx.lineTo(20, 36); mctx.closePath(); mctx.fill();
+          mctx.beginPath();
+          mctx.moveTo(44, 18); mctx.quadraticCurveTo(46, 40, 42, 55);
+          mctx.lineTo(40, 36); mctx.closePath(); mctx.fill();
+        }
         // Head
         mctx.fillStyle = skinTone;
         mctx.beginPath(); mctx.arc(30, 22, 14, 0, Math.PI*2); mctx.fill();
-        // Hair
+        // Head highlight
+        mctx.fillStyle = 'rgba(255,255,255,0.15)';
+        mctx.beginPath(); mctx.arc(27, 18, 6, 0, Math.PI*2); mctx.fill();
+        // Hair top
         mctx.fillStyle = hairColor;
-        mctx.beginPath(); mctx.ellipse(30, 16, 16, 10, 0, Math.PI, 0, true); mctx.fill();
-        mctx.fillRect(14, 16, 32, 3);
-        // Eyes
-        mctx.fillStyle = '#1a1a2e';
-        mctx.beginPath(); mctx.arc(25, 22, 2, 0, Math.PI*2); mctx.fill();
-        mctx.beginPath(); mctx.arc(35, 22, 2, 0, Math.PI*2); mctx.fill();
-        // Smile
-        mctx.strokeStyle = '#e74c3c'; mctx.lineWidth = 1.5; mctx.lineCap = 'round';
-        mctx.beginPath(); mctx.arc(30, 28, 5, 0.15*Math.PI, 0.85*Math.PI); mctx.stroke();
-        // Body
-        const topColor = U.pick(['#FF69B4','#1E90FF','#FFD700','#32CD32','#9370DB','#FF6347','#00CED1']);
-        mctx.fillStyle = topColor;
-        mctx.fillRect(22, 35, 16, 20);
-        mctx.beginPath(); mctx.arc(30, 55, 8, 0, Math.PI); mctx.fill();
+        mctx.beginPath(); mctx.ellipse(30, 14, 16, 10, 0, Math.PI, 0, true); mctx.fill();
+        mctx.fillRect(14, 14, 32, 3);
+        // Eyes — big sparkly
+        [-5,5].forEach(dx => {
+          mctx.fillStyle = '#fff';
+          mctx.beginPath(); mctx.ellipse(30+dx, 22, 4, 3.5, 0, 0, Math.PI*2); mctx.fill();
+          mctx.fillStyle = '#4a90d9';
+          mctx.beginPath(); mctx.arc(30+dx, 22.5, 2.5, 0, Math.PI*2); mctx.fill();
+          mctx.fillStyle = '#15102a';
+          mctx.beginPath(); mctx.arc(30+dx, 22.5, 1.2, 0, Math.PI*2); mctx.fill();
+          mctx.fillStyle = 'rgba(255,255,255,0.9)';
+          mctx.beginPath(); mctx.arc(30+dx-1, 21, 1, 0, Math.PI*2); mctx.fill();
+        });
+        // Blush
+        mctx.fillStyle = 'rgba(255,140,160,0.2)';
+        mctx.beginPath(); mctx.ellipse(22, 26, 4, 2, 0, 0, Math.PI*2); mctx.fill();
+        mctx.beginPath(); mctx.ellipse(38, 26, 4, 2, 0, 0, Math.PI*2); mctx.fill();
+        // Tiny smile
+        mctx.strokeStyle = '#e8888a'; mctx.lineWidth = 1.2; mctx.lineCap = 'round';
+        mctx.beginPath(); mctx.arc(30, 28, 3, 0.15*Math.PI, 0.85*Math.PI); mctx.stroke();
       }
 
       const nameEl = document.createElement('div');
