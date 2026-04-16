@@ -22,6 +22,7 @@ const Game = {
     // Init subsystems
     ColorWheel.init();
     Weather.init();
+    this._initParticles();
 
     // Load saved state
     const saved = U.load('state');
@@ -56,6 +57,33 @@ const Game = {
     }
 
     console.log('✨ Fashion Game initialized!');
+  },
+
+  _initParticles() {
+    const pContainer = document.getElementById('particles-container');
+    if (!pContainer) return;
+    const types = ['✨', '💖', '⭐', '🫧'];
+    const count = 35; // A good number of floating particles
+
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.textContent = U.pick(types);
+      
+      const size = U.randFloat(0.8, 1.8);
+      const left = U.rand(0, 100);
+      const duration = U.randFloat(8, 20);
+      const delay = U.randFloat(0, 15);
+      
+      p.style.cssText = `
+        left: ${left}vw;
+        font-size: ${size}rem;
+        animation-duration: ${duration}s;
+        animation-delay: -${delay}s;
+        filter: drop-shadow(0 0 10px rgba(255,255,255,0.6));
+      `;
+      pContainer.appendChild(p);
+    }
   },
 
   /* ===== NAVIGATION ===== */

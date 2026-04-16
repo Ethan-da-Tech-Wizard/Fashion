@@ -1,27 +1,27 @@
 /* ===== FASHION GAME — STYLE SYSTEM ===== */
 :root {
-  --bg-dark: #0d0b1a;
+  --bg-dark: #120b29; /* Magic purple space */
   --bg-card: rgba(255,255,255,0.06);
-  --bg-glass: rgba(255,255,255,0.08);
-  --bg-glass-hover: rgba(255,255,255,0.14);
-  --border-glass: rgba(255,255,255,0.12);
-  --text-primary: #f0e6ff;
-  --text-secondary: #a89bc2;
-  --text-muted: #6b5f82;
-  --accent-pink: #ff6eb4;
-  --accent-purple: #b36bff;
-  --accent-gold: #ffd700;
-  --accent-teal: #3edbd5;
-  --accent-coral: #ff7b7b;
-  --gradient-main: linear-gradient(135deg, #ff6eb4 0%, #b36bff 50%, #3edbd5 100%);
-  --gradient-warm: linear-gradient(135deg, #ff6eb4 0%, #ffd700 100%);
-  --gradient-cool: linear-gradient(135deg, #b36bff 0%, #3edbd5 100%);
-  --shadow-glow: 0 0 30px rgba(179,107,255,0.3);
-  --shadow-card: 0 8px 32px rgba(0,0,0,0.4);
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 22px;
-  --radius-xl: 32px;
+  --bg-glass: rgba(255,255,255,0.1);
+  --bg-glass-hover: rgba(255,255,255,0.18);
+  --border-glass: rgba(255,255,255,0.2);
+  --text-primary: #ffffff;
+  --text-secondary: #ebd9ff;
+  --text-muted: #a491c7;
+  --accent-pink: #ff4db8;  /* Bubblegum Pink */
+  --accent-purple: #c86bfa; /* Magic Purple */
+  --accent-gold: #ffeb3b;  /* Sparkle Gold */
+  --accent-teal: #00f0ff;  /* Electric Teal */
+  --accent-coral: #ff577f; /* Electric Coral */
+  --gradient-main: linear-gradient(135deg, #ff4db8 0%, #c86bfa 50%, #00f0ff 100%);
+  --gradient-warm: linear-gradient(135deg, #ff4db8 0%, #ffeb3b 100%);
+  --gradient-cool: linear-gradient(135deg, #c86bfa 0%, #00f0ff 100%);
+  --shadow-glow: 0 0 40px rgba(200,107,250,0.5);
+  --shadow-card: 0 10px 40px rgba(0,0,0,0.5);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 36px;
   --font-display: 'Fredoka', sans-serif;
   --font-body: 'Outfit', sans-serif;
   --transition: .25s cubic-bezier(.4,0,.2,1);
@@ -94,9 +94,18 @@ body {
 .btn-primary {
   background: var(--gradient-main);
   color: #fff;
-  box-shadow: 0 4px 20px rgba(255,110,180,0.35);
+  box-shadow: 0 4px 20px rgba(255,77,184,0.4);
+  animation: pulse-glow 2.5s infinite alternate;
 }
-.btn-primary:hover { box-shadow: 0 6px 28px rgba(255,110,180,0.5); transform: translateY(-1px); }
+.btn-primary:hover { 
+  box-shadow: 0 6px 30px rgba(255,77,184,0.7); 
+  transform: translateY(-2px) scale(1.03); 
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 4px 20px rgba(255,77,184,0.4); }
+  100% { box-shadow: 0 4px 30px rgba(255,77,184,0.8); }
+}
 
 .btn-secondary {
   background: var(--bg-glass);
@@ -934,4 +943,88 @@ body {
   padding: 2px 8px;
   border-radius: 10px;
   background: rgba(255,255,255,0.04);
+}
+
+/* ===== PARTICLES (Sparkles & Hearts) ===== */
+#particles-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  pointer-events: none;
+  animation: float-up linear infinite;
+  opacity: 0;
+}
+
+@keyframes float-up {
+  0% { transform: translateY(100px) scale(0.5) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateY(-100vh) scale(1.5) rotate(360deg); opacity: 0; }
+}
+
+/* ===== TOOL HOVER MICRO-INTERACTIONS ===== */
+.tool-btn {
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s, box-shadow 0.2s;
+}
+.tool-btn:hover {
+  transform: scale(1.08) rotate(-3deg);
+  background: var(--bg-glass-hover);
+  border-color: var(--accent-pink);
+  box-shadow: 0 4px 15px rgba(255,77,184,0.3);
+}
+.tool-btn:active {
+  transform: scale(0.95);
+}
+
+/* ===== SHIMMER EFFECT FOR TITLE ===== */
+.shimmer-text {
+  background: linear-gradient(to right, var(--accent-pink) 20%, #ffffff 40%, #ffffff 60%, var(--accent-teal) 80%);
+  background-size: 200% auto;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* ===== WORKSHOP CARD DECORATIVE BORDERS ===== */
+.workshop-card {
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+}
+.workshop-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 20px rgba(200,107,250,0.4);
+}
+.workshop-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+  border: 2px dashed rgba(255,255,255,0.1);
+  transition: border-color 0.3s;
+  pointer-events: none;
+}
+.workshop-card:hover::before {
+  border-color: var(--accent-pink);
+  animation: border-dance 4s linear infinite;
+}
+
+@keyframes border-dance {
+  to { stroke-dashoffset: 20; }
 }
