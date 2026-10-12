@@ -1,54 +1,29 @@
-<h1 align="center">Fashion City</h1>
-<p align="center"><b>A browser-based design and style game: create a character, design clothes, style hair and makeup, and level up.</b></p>
-<p align="center">
-<img alt="HTML5" src="https://img.shields.io/badge/HTML5-game-e34f26">
-<img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-vanilla-f7df1e">
-<img alt="No build" src="https://img.shields.io/badge/build-none-success">
-<img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
-</p>
+# Fashion City
 
-<p align="center">
-<img src="docs/fashion-menu.png" alt="Fashion City main menu" width="48%">
-<img src="docs/fashion-workshop.png" alt="Fashion City workshop with six studios to unlock" width="48%">
-</p>
+A browser dress-up game with clothing, hair, makeup, and progression, built without a package toolchain.
 
-Fashion City is a self-contained web game. Make your own character, then work through a set of creative studios where you design outfits and accessories, cut and dye hair, and apply makeup. You earn XP and coins and level up as you create, unlocking new studios along the way.
+**Status:** Browser-game prototype  
+**Built with:** HTML, CSS, JavaScript
 
-## Features
+[Project guide](docs/PROJECT_GUIDE.md) · [Every file explained](docs/FILE_GUIDE.md) · [Licenses and dependencies](docs/LICENSE_REVIEW.md)
 
-- **Character creator:** face shape, skin tone, hair style and color, eye shape and color, plus a random option.
-- **Creative studios:** Fashion Studio, Hair Salon, Makeup Studio, Tech Workshop, Home Decor and a Book Shop. Studios unlock as you level up.
-- **Progression:** levels, XP and coins, with new game, continue and settings menus and a freestyle challenge.
-- **Zero dependencies:** plain HTML, CSS and JavaScript. No install, no build step.
+## Start here
 
-## Play
+- [index.html](index.html) — Browser document: Fashion — Design & Style Game; provides page structure and may include inline styles or application logic.
 
-```sh
-git clone https://github.com/Ethan-da-Tech-Wizard/Fashion.git
-cd Fashion
-open index.html   # or double-click it in your file manager
-```
+[Detailed setup, usage, and development notes](PROJECT_NOTES.md) preserve the previous project documentation.
 
-Or serve it locally:
+## Repository layout
 
-```sh
-python3 -m http.server 8000
-```
+| Path | Role |
+| --- | --- |
+| [docs/](docs/) | Project documentation, decisions, and reference material (7 tracked entries). |
+| [js/](js/) | Project-specific js components (14 tracked entries). |
 
-## Roadmap
+## Scope and current limits
 
-The next big step is an open-world 2D RPG city built around the current menu-driven game. See [open_world_roadmap.md](open_world_roadmap.md) for the plan.
-
-## Project layout
-
-| Path | Purpose |
-|---|---|
-| `index.html` | Game page and menus |
-| `style.css` | Visual design |
-| `js/` | Game logic |
-| `open_world_roadmap.md` | Open world design notes |
-| `docs/` | Screenshots |
+The static project runs in a modern browser. See the existing game instructions for controls and persistence.
 
 ## License
 
-Released under the [MIT License](LICENSE).
+Original project code retains **MIT** terms in [LICENSE](LICENSE). Third-party libraries, media, data, models, and tools retain their own terms. See the [license review](docs/LICENSE_REVIEW.md) and [dependency inventory](docs/DEPENDENCIES.csv).
