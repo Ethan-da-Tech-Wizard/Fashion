@@ -7,13 +7,18 @@
 <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
 </p>
 
-Fashion City is a self-contained web game. Make your own character, then work through a set of creative studios where you design outfits and accessories, cut and dye hair, and apply makeup. You earn XP and level up as you create.
+<p align="center">
+<img src="docs/fashion-menu.png" alt="Fashion City main menu" width="48%">
+<img src="docs/fashion-workshop.png" alt="Fashion City workshop with six studios to unlock" width="48%">
+</p>
+
+Fashion City is a self-contained web game. Make your own character, then work through a set of creative studios where you design outfits and accessories, cut and dye hair, and apply makeup. You earn XP and coins and level up as you create, unlocking new studios along the way.
 
 ## Features
 
 - **Character creator:** face shape, skin tone, hair style and color, eye shape and color, plus a random option.
-- **Creative studios:** a Fashion Studio for clothes and accessories, a Hair Salon, and a Makeup Studio with blush, shadow and lipstick.
-- **Progression:** levels and XP, with new game, continue and settings menus.
+- **Creative studios:** Fashion Studio, Hair Salon, Makeup Studio, Tech Workshop, Home Decor and a Book Shop. Studios unlock as you level up.
+- **Progression:** levels, XP and coins, with new game, continue and settings menus and a freestyle challenge.
 - **Zero dependencies:** plain HTML, CSS and JavaScript. No install, no build step.
 
 ## Play
@@ -42,6 +47,7 @@ The next big step is an open-world 2D RPG city built around the current menu-dri
 | `style.css` | Visual design |
 | `js/` | Game logic |
 | `open_world_roadmap.md` | Open world design notes |
+| `docs/` | Screenshots |
 
 ## License
 
