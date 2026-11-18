@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: salon.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Hair styling and beauty treatment workstation logic.
+//          Controls haircutting mechanics, blowdrying effects, hair coloring,
+//          accessory placement, and styling transformations.
+// ==============================================================================
 /* ===== HAIR SALON ===== */
 const Salon = {
   hairColor: '#3d2b1f',

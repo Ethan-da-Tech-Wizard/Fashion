@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: colorwheel.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Interactive RGB/HSV color picker component for salon and wardrobe customization.
+//          Converts coordinate interactions on color wheels into hex values and updates
+//          live SVG/canvas garment filters and hair dye tint layers.
+// ==============================================================================
 /* ===== COLOR WHEEL ===== */
 const ColorWheel = {
   canvas: null, ctx: null,

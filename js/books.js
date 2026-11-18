@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: books.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Fashion portfolio and lookbook catalog system.
+//          Manages saved snapshot collections, outfit presets, style magazines,
+//          and historical lookbook browsing for the player avatar.
+// ==============================================================================
 /* ===== BOOK SHOP ===== */
 const Books = {
   bookTitle: '',

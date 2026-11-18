@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: weather.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Atmospheric weather particle and day/night cycle simulation.
+//          Renders falling snow, rain, sparkling sunlight rays, and sunset hues
+//          over the city backdrop outside the salon windows.
+// ==============================================================================
 /* ===== WEATHER SYSTEM ===== */
 const Weather = {
   current: 'sunny',

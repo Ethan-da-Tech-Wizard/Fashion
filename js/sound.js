@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: sound.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Web Audio API sound effects and ambient soundtrack engine.
+//          Synthesizes retro chimes, scissors snipping, camera clicks, and music
+//          tracks with user volume controls and mute persistence.
+// ==============================================================================
 /* ===== SOUND EFFECTS (Web Audio API) ===== */
 const Sound = {
   ctx: null,

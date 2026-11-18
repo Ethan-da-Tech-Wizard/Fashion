@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: tools.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Interactive salon tool interactions (curling irons, combs, scissors).
+//          Provides cursor collision detection, sound triggering, and canvas
+//          transformation effects during tool application.
+// ==============================================================================
 /* ===== DRAWING TOOLS ===== */
 const Tools = {
   currentTool: null,

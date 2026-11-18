@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: stations.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Interactive workstation coordinator for salon, wardrobe, runway, and studio.
+//          Handles tab transitions, camera focus shifts, tool enablement,
+//          and active workstation state management.
+// ==============================================================================
 /* ===== FASHION STUDIO STATION ===== */
 const Stations = {
   currentStep: 0,

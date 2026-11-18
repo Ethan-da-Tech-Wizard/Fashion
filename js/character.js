@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: character.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Core avatar character rendering and layer composite engine.
+//          Draws modular body parts, skin tones, hairstyles, facial expressions,
+//          and layered clothing garments to the 2D canvas in correct z-order.
+// ==============================================================================
 /* ===== CHARACTER CREATION & RENDERING (Overhaul v2) ===== */
 const Character = {
   data: {

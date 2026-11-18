@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: tech.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: In-game smartphone, camera photography, and social feed simulator.
+//          Allows players to capture in-game polaroids, apply photo filters,
+//          and view mock social media engagement metrics.
+// ==============================================================================
 /* ===== TECH WORKSHOP ===== */
 const Tech = {
   deviceType: null,

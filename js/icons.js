@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: icons.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Vector icon dictionary and SVG generator for game controls.
+//          Supplies scalable icon graphics for salon tools, clothing types,
+//          sound toggles, navigation tabs, and inventory filters.
+// ==============================================================================
 const Icons = {
   get(id, size = 24, classes = '') {
     const p = this.paths[id] || this.paths['star']; // fallback

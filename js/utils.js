@@ -1,3 +1,10 @@
+// ==============================================================================
+// Program: utils.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: General utility functions including random number generation, math clamps,
+//          color conversion helpers, string formatters, and DOM query helpers.
+// ==============================================================================
 /* ===== UTILS & CONSTANTS ===== */
 const U = {
   /* Canvas helpers */

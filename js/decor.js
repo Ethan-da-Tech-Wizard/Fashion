@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: decor.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Interior design and studio decoration manager for Fashion City.
+//          Controls room furniture placement, wallpaper and flooring styles,
+//          lighting ambience, and decorative background objects.
+// ==============================================================================
 /* ===== HOME DECOR STUDIO ===== */
 const Decor = {
   decorType: null,

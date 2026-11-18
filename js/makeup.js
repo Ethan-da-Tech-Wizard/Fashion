@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: makeup.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Facial beauty salon and cosmetics simulation module.
+//          Manages lipstick, eyeliner, blush, eye shadow, and face gem rendering
+//          with adjustable opacity, blending modes, and color swatches.
+// ==============================================================================
 /* ===== MAKEUP STUDIO ===== */
 const Makeup = {
   // Current makeup state

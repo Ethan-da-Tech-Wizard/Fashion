@@ -1,3 +1,11 @@
+// ==============================================================================
+// Program: game.js
+// Programmer: Ethan-da-Tech-Wizard
+// Last Modified: November 18, 2026
+// Purpose: Central game loop, event dispatcher, and scene coordinator.
+//          Coordinates station switching, user input events, animation frames,
+//          progression milestones, and local storage state persistence.
+// ==============================================================================
 /* ===== MAIN GAME ENGINE ===== */
 const Game = {
   state: {
