@@ -1,9 +1,17 @@
+/*
+ * Program: Fashion - tech.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Tech Workshop: lets the player decorate a phone, tablet or earbuds drawn on a canvas.
+ */
 /* ===== TECH WORKSHOP ===== */
+/** Tech module: device settings and editor and drawing logic. */
 const Tech = {
   deviceType: null,
   deviceColor: '#1a1a2e',
   screenColor: '#111827',
 
+  /** Sets up the canvas and tools. */
   init() {
     const c = document.getElementById('tech-canvas');
     if (!c) return;
@@ -18,6 +26,7 @@ const Tech = {
   },
 
   /* ===== TOOLS ===== */
+  /** Builds the tool buttons. */
   _buildTools() {
     const tools = document.getElementById('tech-tools');
     if (!tools) return;
@@ -49,6 +58,7 @@ const Tech = {
     });
   },
 
+  /** Fills the side panel for the chosen tool. */
   _buildSidePanel(toolId) {
     const side = document.getElementById('tech-side');
     if (!side) return;
@@ -182,6 +192,7 @@ const Tech = {
     }
   },
 
+  /** Builds a painting panel with the given label. */
   _buildPaintPanel(side, label) {
     const h4 = document.createElement('h4');
     h4.textContent = label + ' Color';
@@ -220,6 +231,7 @@ const Tech = {
   },
 
   /* ===== DRAW ===== */
+  /** Draws a placeholder message on the canvas. */
   _drawPlaceholder(msg) {
     const c = document.getElementById('tech-canvas');
     const ctx = c.getContext('2d');
@@ -230,6 +242,7 @@ const Tech = {
     ctx.fillText(msg, c.width/2, c.height/2);
   },
 
+  /** Draws the chosen device. */
   _drawDevice() {
     const c = document.getElementById('tech-canvas');
     if (!c || !this.deviceType) return;
@@ -252,6 +265,7 @@ const Tech = {
     }
   },
 
+  /** Draws a phone at the given center and size. */
   _drawPhone(ctx, cx, cy, sw, sh) {
     const r = 16;
     // Shadow
@@ -301,6 +315,7 @@ const Tech = {
     ctx.stroke();
   },
 
+  /** Draws a tablet at the given center and size. */
   _drawTablet(ctx, cx, cy, sw, sh) {
     const r = 14;
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -339,6 +354,7 @@ const Tech = {
     ctx.stroke();
   },
 
+  /** Draws earbuds and their case at the given center. */
   _drawAirpods(ctx, cx, cy) {
     // Case
     const caseW = 90, caseH = 100, caseR = 20;
@@ -382,6 +398,7 @@ const Tech = {
     });
   },
 
+  /** Traces a rounded-rectangle path (x, y, width, height, corner radius). */
   _roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -393,6 +410,7 @@ const Tech = {
   },
 
   /* ===== FINISH ===== */
+  /** Completes the design and hands the result to the game. */
   finish() {
     const c = document.getElementById('tech-canvas');
     if (c && this.deviceType) {

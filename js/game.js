@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - game.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Main game engine: owns the saved game state (level, XP, coins, closet), screen navigation, HUD updates, customers and settings.
+ */
 /* ===== MAIN GAME ENGINE ===== */
+/** Game module: central state and screen controller for the whole app. */
 const Game = {
   state: {
     level: 1,
@@ -13,6 +20,7 @@ const Game = {
 
   currentScreen: 'menu',
 
+  /** Starts the app: loads saved state, initialises the other modules and shows the title screen. */
   init() {
     // Init audio context on first user interaction
     document.addEventListener('click', () => {
@@ -59,6 +67,7 @@ const Game = {
     console.log('✨ Fashion Game initialized!');
   },
 
+  /** Creates the background particle effect. */
   _initParticles() {
     const pContainer = document.getElementById('particles-container');
     if (!pContainer) return;
@@ -87,6 +96,7 @@ const Game = {
   },
 
   /* ===== NAVIGATION ===== */
+  /** Switches to the named screen and runs that screen setup. */
   goTo(screen) {
     // Hide all screens
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -141,6 +151,7 @@ const Game = {
   },
 
   /* ===== GAME FLOW ===== */
+  /** Starts a new game and moves to character creation. */
   newGame() {
     this.state = {
       level: 1, xp: 0, coins: 0,
@@ -151,6 +162,7 @@ const Game = {
     this.goTo('character');
   },
 
+  /** Continues from the saved game. */
   continueGame() {
     if (!this.state.hasStarted) return;
     if (this.state.character) {
@@ -159,6 +171,7 @@ const Game = {
     this.goTo('workshop');
   },
 
+  /** Stores the finished character and moves on to the workshop. */
   finishCharacter() {
     this.state.character = Character.getData();
     this.state.hasStarted = true;
@@ -168,15 +181,18 @@ const Game = {
   },
 
   /* ===== STATE MANAGEMENT ===== */
+  /** Saves the current state to local storage. */
   save() {
     U.save('state', this.state);
   },
 
+  /** Adds an item to the closet and saves. */
   addToCloset(item) {
     this.state.closet.push(item);
     this.save();
   },
 
+  /** Adds experience points and checks for a level up. */
   addXP(amount) {
     this.state.xp += amount;
     this._updateHUD();
@@ -184,6 +200,7 @@ const Game = {
     Sound.play('coin');
   },
 
+  /** Raises the level when enough XP has been earned. */
   checkLevelUp() {
     const nextLevel = LEVEL_DATA.find(l => l.lvl === this.state.level + 1);
     if (nextLevel && this.state.xp >= nextLevel.xp) {
@@ -194,6 +211,7 @@ const Game = {
     return false;
   },
 
+  /** Adds coins to the player total and updates the display. */
   addCoins(amount) {
     this.state.coins += amount;
     this._updateHUD();
@@ -201,6 +219,7 @@ const Game = {
   },
 
   /* ===== UI UPDATES ===== */
+  /** Refreshes the heads-up display with level, XP and coins. */
   _updateHUD() {
     const levelBadge = document.getElementById('level-badge');
     const xpText = document.getElementById('xp-text');
@@ -217,6 +236,7 @@ const Game = {
     if (workshopCoins) workshopCoins.textContent = `🪙 ${this.state.coins}`;
   },
 
+  /** Locks or unlocks station cards based on the current level. */
   _updateCardLocks() {
     const lvl = this.state.level;
     // Salon unlocks at level 3, Makeup at 4, Tech at 5, Decor at 6, Books at 7
@@ -234,6 +254,7 @@ const Game = {
     });
   },
 
+  /** Draws the character in the workshop screen. */
   _renderWorkshopChar() {
     const c = document.getElementById('workshop-char-canvas');
     if (!c || !this.state.character) return;
@@ -243,6 +264,7 @@ const Game = {
   },
 
   /* ===== LEVEL UP ===== */
+  /** Shows the level-up display and its unlocks. */
   _renderLevelUp() {
     document.getElementById('levelup-level').textContent = `Level ${this.state.level}`;
 
@@ -264,6 +286,7 @@ const Game = {
     this._fireConfetti();
   },
 
+  /** Plays a confetti animation. */
   _fireConfetti() {
     const canvas = document.getElementById('confetti-canvas');
     if (!canvas) return;
@@ -319,6 +342,7 @@ const Game = {
   },
 
   /* ===== CUSTOMERS (Expanded) ===== */
+  /** Builds the list of customers and what they want. */
   _renderCustomers() {
     const queue = document.getElementById('customer-queue');
     const detail = document.getElementById('customer-detail');
@@ -456,6 +480,7 @@ const Game = {
     }
   },
 
+  /** Handles serving a customer with a closet item. */
   _serveCustomer(name, wants, trait, detailEl, cardEl) {
     const items = this.state.closet.filter(i => {
       if (wants === 'all') return true;
@@ -511,6 +536,7 @@ const Game = {
     }
   },
 
+  /** Finishes a sale and awards coins and XP. */
   _completeSale(coins, itemId) {
     this.addCoins(coins);
     this.addXP(20);
@@ -524,6 +550,7 @@ const Game = {
   },
 
   /* ===== FREESTYLE CHALLENGE ===== */
+  /** Starts the free design mode. */
   startFreestyle() {
     const stations = ['studio','salon','makeup','tech','decor','books'];
     const stationNames = { studio:'Fashion Studio', salon:'Hair Salon', makeup:'Makeup Studio', tech:'Tech Workshop', decor:'Home Decor', books:'Book Shop' };
@@ -560,6 +587,7 @@ const Game = {
     Sound.play('challenge');
   },
 
+  /** Shows a pop-up message and calls the callback when dismissed. */
   _showToast(title, message, onDismiss) {
     // Create toast overlay
     const overlay = document.createElement('div');
@@ -586,11 +614,13 @@ const Game = {
   },
 
   /* ===== SETTINGS ===== */
+  /** Opens the settings dialog. */
   showSettings() {
     document.getElementById('settings-modal').classList.add('active');
     Sound.play('click');
   },
 
+  /** Closes the settings dialog. */
   closeSettings() {
     document.getElementById('settings-modal').classList.remove('active');
     this.state.weather = Weather.current;
@@ -598,6 +628,7 @@ const Game = {
     this.save();
   },
 
+  /** Clears the saved game and restarts. */
   resetGame() {
     if (confirm('Are you sure? This will delete all progress!')) {
       localStorage.removeItem('fashion_state');

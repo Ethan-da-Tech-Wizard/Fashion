@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - character.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Character creator: stores the character appearance data, builds the option menus, and draws the character onto a canvas.
+ */
 /* ===== CHARACTER CREATION & RENDERING (Overhaul v2) ===== */
+/** Character module: holds appearance settings and the canvas drawing code for the player character. */
 const Character = {
   data: {
     skinTone: '#FDDBB4',
@@ -11,12 +18,14 @@ const Character = {
     accessories: [],
   },
 
+  /** Initialises the creator by building its option panels and color callbacks. */
   init() {
     this._buildOptions();
     this._setupColorCallbacks();
     this.render();
   },
 
+  /** Builds the option panels (skin, hair, eyes and so on) for character creation. */
   _buildOptions() {
     // Face shapes
     const faceRow = document.getElementById('face-shapes');
@@ -103,6 +112,7 @@ const Character = {
     document.getElementById('eye-color-pick').style.background = this.data.eyeColor;
   },
 
+  /** Draws a small hair-style preview thumbnail for an option button. */
   _drawMiniHairPreview(ctx, style, cx, cy, color) {
     ctx.fillStyle = color;
     // Simple hair silhouette preview
@@ -143,6 +153,7 @@ const Character = {
     }
   },
 
+  /** Draws a small eye-shape preview thumbnail for an option button. */
   _drawMiniEyePreview(ctx, shape, cx, cy) {
     ctx.fillStyle = '#fff';
     if (shape === 'closed-happy') {
@@ -159,6 +170,7 @@ const Character = {
     ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(cx-2, cy-2, 1.8, 0, Math.PI*2); ctx.fill();
   },
 
+  /** Connects the color picker to the character color fields. */
   _setupColorCallbacks() {
     const self = this;
     document.getElementById('skin-color-pick').onclick = () => {
@@ -175,6 +187,7 @@ const Character = {
     };
   },
 
+  /** Picks random appearance values for the character. */
   randomize() {
     this.data.skinTone = U.pick(SKIN_PRESETS);
     this.data.hairColor = U.pick(HAIR_COLOR_PRESETS);
@@ -189,6 +202,7 @@ const Character = {
     this.render();
   },
 
+  /** Applies a surprise random look to the character. */
   mystery() {
     this.randomize();
     const c = document.getElementById('character-canvas');
@@ -199,6 +213,7 @@ const Character = {
     Sound.play('sparkle');
   },
 
+  /** Draws the current character on the named canvas at the given scale. */
   render(canvasId = 'character-canvas', scale = 1) {
     const c = document.getElementById(canvasId);
     if (!c) return;
@@ -211,6 +226,7 @@ const Character = {
   /* ============================
      MAIN CHARACTER DRAW
      ============================ */
+  /** Draws a full character from a data object at a center point, scale and canvas size. */
   drawCharacter(ctx, data, cx, cy, scale, canvasW, canvasH) {
     const s = scale;
     ctx.save();
@@ -450,6 +466,7 @@ const Character = {
   },
 
   /* ===== HEAD SHAPE ===== */
+  /** Draws the head and face using the skin colors and head size. */
   _drawHead(ctx, data, skinColor, skinHighlight, skinShadow, headR, headY, s) {
     // Base head
     ctx.fillStyle = skinColor;
@@ -496,6 +513,7 @@ const Character = {
   },
 
   /* ===== EYES (Luminous Doll-Style) ===== */
+  /** Draws a single eye in the chosen shape and color. */
   _drawEye(ctx, x, y, data, s, isRight) {
     const shape = data.eyeShape;
     if (shape === 'closed-happy') {
@@ -566,6 +584,7 @@ const Character = {
   },
 
   /* ===== HAIR BACK ===== */
+  /** Draws the back layer of the hair, behind the head. */
   _drawHairBack(ctx, data, headR, headY, s) {
     ctx.fillStyle = data.hairColor;
     const style = data.hairStyle;
@@ -622,6 +641,7 @@ const Character = {
   },
 
   /* ===== HAIR FRONT ===== */
+  /** Draws the front layer of the hair, over the head. */
   _drawHairFront(ctx, data, headR, headY, s) {
     ctx.fillStyle = data.hairColor;
     const style = data.hairStyle;
@@ -719,13 +739,16 @@ const Character = {
     }
   },
 
+  /** Returns a darker version of a hex color by the given amount. */
   _darken(hex, amount) {
     const [h, s, l] = U.hexToHsl(hex);
     return U.hslToHex(h, s, Math.max(0, l - amount));
   },
 
+  /** Returns a deep copy of the character data. */
   getData() { return JSON.parse(JSON.stringify(this.data)); },
 
+  /** Replaces the character data with the supplied object. */
   setData(d) {
     this.data = d;
     this._buildOptions();

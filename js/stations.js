@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - stations.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Fashion Studio station and Closet: walks the player through choosing a garment, fabric, cut and decoration, then saves it to the closet.
+ */
 /* ===== FASHION STUDIO STATION ===== */
+/** Fashion studio module: step-by-step garment design flow. */
 const Stations = {
   currentStep: 0,
   steps: ['type','fabric','cut','decorate','preview'],
@@ -7,12 +14,14 @@ const Stations = {
   fabricColor: '#ff69b4',
   decorCanvas: null,
 
+  /** Starts the studio at the given step. */
   init(step) {
     this.currentStep = step || 0;
     this._resizeCanvas();
     this._renderStep();
   },
 
+  /** Resizes the canvas to fit its container. */
   _resizeCanvas() {
     const c = document.getElementById('studio-canvas');
     if (!c) return;
@@ -22,6 +31,7 @@ const Stations = {
     c.height = Math.min(rect.height, 500);
   },
 
+  /** Moves to the next design step. */
   nextStep() {
     if (this.currentStep === 0 && !this.garmentType) {
       Sound.play('error');
@@ -37,6 +47,7 @@ const Stations = {
     }
   },
 
+  /** Moves back to the previous design step. */
   prevStep() {
     if (this.currentStep > 0) {
       this.currentStep--;
@@ -45,6 +56,7 @@ const Stations = {
     }
   },
 
+  /** Renders whichever step is current. */
   _renderStep() {
     // Update step indicators
     document.querySelectorAll('#studio-steps .step').forEach((el, i) => {
@@ -68,6 +80,7 @@ const Stations = {
   },
 
   /* ===== TYPE STEP ===== */
+  /** Renders the garment type selection step. */
   _renderTypeStep() {
     const tools = document.getElementById('studio-tools');
     tools.innerHTML = '<div class="tool-btn" style="font-size:12px;height:auto;padding:6px;">Pick a<br>Type</div>';
@@ -96,6 +109,7 @@ const Stations = {
     else this._drawPlaceholder('Pick a garment type →');
   },
 
+  /** Draws a placeholder message on the canvas. */
   _drawPlaceholder(msg) {
     const c = document.getElementById('studio-canvas');
     const ctx = c.getContext('2d');
@@ -106,6 +120,7 @@ const Stations = {
     ctx.fillText(msg, c.width/2, c.height/2);
   },
 
+  /** Draws the outline of the chosen garment. */
   _drawGarmentOutline() {
     const c = document.getElementById('studio-canvas');
     const ctx = c.getContext('2d');
@@ -129,6 +144,7 @@ const Stations = {
     ctx.fillText(g ? g.name : '', cx, h - 30);
   },
 
+  /** Traces the path of a garment type at a center point and scale. */
   _drawGarmentPath(ctx, type, cx, cy, scale) {
     const s = scale;
     ctx.beginPath();
@@ -213,6 +229,7 @@ const Stations = {
   },
 
   /* ===== FABRIC STEP ===== */
+  /** Renders the fabric selection step. */
   _renderFabricStep() {
     const tools = document.getElementById('studio-tools');
     tools.innerHTML = '';
@@ -262,6 +279,7 @@ const Stations = {
     this._drawFabric();
   },
 
+  /** Fills the garment with the chosen fabric color and pattern. */
   _drawFabric() {
     const c = document.getElementById('studio-canvas');
     const ctx = c.getContext('2d');
@@ -377,6 +395,7 @@ const Stations = {
   },
 
   /* ===== CUT STEP ===== */
+  /** Renders the cutting step. */
   _renderCutStep() {
     const tools = document.getElementById('studio-tools');
     tools.innerHTML = `
@@ -407,6 +426,7 @@ const Stations = {
   },
 
   /* ===== DECORATE STEP ===== */
+  /** Renders the decorating step. */
   _renderDecorateStep() {
     // Save current fabric as base
     const c = document.getElementById('studio-canvas');
@@ -448,6 +468,7 @@ const Stations = {
     this._updateSidePanel('dye');
   },
 
+  /** Updates the side panel for the chosen tool. */
   _updateSidePanel(toolId) {
     const side = document.getElementById('studio-side');
     side.innerHTML = '';
@@ -546,6 +567,7 @@ const Stations = {
   },
 
   /* ===== PREVIEW STEP ===== */
+  /** Renders the final preview step. */
   _renderPreviewStep() {
     const tools = document.getElementById('studio-tools');
     tools.innerHTML = '<div class="tool-btn" style="font-size:12px;height:auto;padding:6px;">Preview</div>';
@@ -567,6 +589,7 @@ const Stations = {
   },
 
   /* ===== SAVE ===== */
+  /** Saves the finished garment to the closet. */
   _saveToCloset() {
     const c = document.getElementById('studio-canvas');
     const imageData = c.toDataURL('image/png');
@@ -607,9 +630,11 @@ const Stations = {
 
 
 /* ===== CLOSET ===== */
+/** Closet module: lists saved items with category filter tabs. */
 const Closet = {
   currentFilter: 'all',
 
+  /** Switches the closet filter tab and redraws. */
   filterTab(tab) {
     this.currentFilter = tab;
     document.querySelectorAll('.closet-tabs .tab').forEach(t => {
@@ -619,6 +644,7 @@ const Closet = {
     Sound.play('click');
   },
 
+  /** Draws the closet contents. */
   render() {
     const grid = document.getElementById('closet-grid');
     if (!grid) return;

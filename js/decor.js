@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - decor.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Home Decor Studio: lets the player design a blanket, pillow or rug with colors, patterns, stickers, tassels and fringe on a canvas.
+ */
 /* ===== HOME DECOR STUDIO ===== */
+/** Home decor module: holds the item settings and the editor and drawing logic. */
 const Decor = {
   decorType: null,
   baseColor: '#9370DB',
@@ -6,6 +13,7 @@ const Decor = {
   tassels: false,
   fringe: false,
 
+  /** Sets up the decor canvas, tools and starting panel. */
   init() {
     const c = document.getElementById('decor-canvas');
     if (!c) return;
@@ -22,6 +30,7 @@ const Decor = {
   },
 
   /* ===== TOOLS ===== */
+  /** Builds the tool buttons for the decor editor. */
   _buildTools() {
     const tools = document.getElementById('decor-tools');
     if (!tools) return;
@@ -54,6 +63,7 @@ const Decor = {
     });
   },
 
+  /** Fills the side panel for the chosen tool. */
   _buildSidePanel(toolId) {
     const side = document.getElementById('decor-side');
     if (!side) return;
@@ -84,6 +94,7 @@ const Decor = {
   },
 
   /* ===== PICK PANEL ===== */
+  /** Builds the panel for choosing the item type. */
   _buildPickPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Choose Item';
@@ -117,6 +128,7 @@ const Decor = {
   },
 
   /* ===== FABRIC PANEL ===== */
+  /** Builds the panel for choosing the base color. */
   _buildFabricPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Base Color';
@@ -150,6 +162,7 @@ const Decor = {
   },
 
   /* ===== PATTERN PANEL ===== */
+  /** Builds the panel for choosing a pattern. */
   _buildPatternPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Pattern';
@@ -186,6 +199,7 @@ const Decor = {
   },
 
   /* ===== PAINT PANEL ===== */
+  /** Builds the painting controls. */
   _buildPaintPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Paint Color';
@@ -220,6 +234,7 @@ const Decor = {
   },
 
   /* ===== STICKER PANEL ===== */
+  /** Builds the sticker picker panel. */
   _buildStickerPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Stickers';
@@ -248,6 +263,7 @@ const Decor = {
   },
 
   /* ===== GLITTER PANEL ===== */
+  /** Builds the glitter controls. */
   _buildGlitterPanel(side) {
     this._buildPaintPanel(side);
     Tools.currentTool = 'glitter';
@@ -255,6 +271,7 @@ const Decor = {
   },
 
   /* ===== EXTRAS PANEL ===== */
+  /** Builds the extras panel (for example tassels and fringe). */
   _buildExtrasPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Extra Details';
@@ -301,6 +318,7 @@ const Decor = {
   },
 
   /* ===== DRAWING ===== */
+  /** Redraws the decor item with its base color, pattern and extras. */
   _drawDecorItem() {
     const c = document.getElementById('decor-canvas');
     if (!c || !this.decorType) return;
@@ -354,6 +372,7 @@ const Decor = {
     ctx.fillText(d.name, cx, cy + dh/2 + 35);
   },
 
+  /** Traces the outline path for the given decor item type. */
   _getDecorPath(ctx, type, cx, cy, w, h) {
     ctx.beginPath();
     switch(type) {
@@ -383,6 +402,7 @@ const Decor = {
     }
   },
 
+  /** Fills the given area with the chosen pattern in two colors. */
   _drawPattern(ctx, x, y, w, h, dark, light) {
     ctx.fillStyle = dark;
     ctx.strokeStyle = dark;
@@ -455,6 +475,7 @@ const Decor = {
     }
   },
 
+  /** Draws tassels around the item. */
   _drawTassels(ctx, cx, cy, w, h) {
     const corners = [
       [cx - w/2, cy - h/2],
@@ -479,6 +500,7 @@ const Decor = {
     });
   },
 
+  /** Draws fringe along the item edge. */
   _drawFringe(ctx, cx, cy, w, h) {
     const [bh,bs,bl] = U.hexToHsl(this.baseColor);
     ctx.strokeStyle = U.hslToHex(bh, bs, Math.max(0, bl - 10));
@@ -492,6 +514,7 @@ const Decor = {
     }
   },
 
+  /** Draws a border of pearls around the item. */
   _drawPearlBorder() {
     const c = document.getElementById('decor-canvas');
     if (!c || !this.decorType) return;
@@ -531,6 +554,7 @@ const Decor = {
   },
 
   /* ===== FINISH ===== */
+  /** Completes the design and hands the result to the game. */
   finish() {
     const c = document.getElementById('decor-canvas');
     if (c && this.decorType) {

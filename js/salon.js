@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - salon.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Hair Salon: lets the player style, dye, highlight and decorate the character hair with tinsel and accessories on a canvas.
+ */
 /* ===== HAIR SALON ===== */
+/** Salon module: holds the hair settings and the editor and drawing logic. */
 const Salon = {
   hairColor: '#3d2b1f',
   hairStyle: 'long',
@@ -6,6 +13,7 @@ const Salon = {
   tinselOn: false,
   _baseImage: null,
 
+  /** Sets up the salon canvas, tools and starting panel. */
   init() {
     const c = document.getElementById('salon-canvas');
     if (!c) return;
@@ -27,6 +35,7 @@ const Salon = {
   },
 
   /* ===== TOOL PANEL ===== */
+  /** Builds the tool buttons for the salon. */
   _buildTools() {
     const tools = document.getElementById('salon-tools');
     if (!tools) return;
@@ -60,6 +69,7 @@ const Salon = {
     this._onToolChange('style');
   },
 
+  /** Reacts to a tool change by showing its panel. */
   _onToolChange(toolId) {
     const side = document.getElementById('salon-side');
     if (!side) return;
@@ -94,6 +104,7 @@ const Salon = {
   },
 
   /* ===== STYLE PANEL ===== */
+  /** Builds the hair style picker. */
   _buildStylePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Hair Style';
@@ -129,6 +140,7 @@ const Salon = {
   },
 
   /* ===== DYE PANEL ===== */
+  /** Builds the hair dye controls. */
   _buildDyePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Hair Color';
@@ -174,6 +186,7 @@ const Salon = {
   },
 
   /* ===== HIGHLIGHTS PANEL ===== */
+  /** Builds the highlights controls. */
   _buildHighlightsPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Highlights Color';
@@ -217,6 +230,7 @@ const Salon = {
   },
 
   /* ===== TINSEL PANEL ===== */
+  /** Builds the tinsel controls. */
   _buildTinselPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Tinsel';
@@ -272,6 +286,7 @@ const Salon = {
   },
 
   /* ===== ACCESSORIES PANEL ===== */
+  /** Builds the accessories picker. */
   _buildAccessoriesPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Hair Accessories';
@@ -304,6 +319,7 @@ const Salon = {
   },
 
   /* ===== FREEHAND PANEL ===== */
+  /** Builds the freehand drawing controls. */
   _buildFreehandPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Freehand Drawing';
@@ -341,11 +357,13 @@ const Salon = {
   },
 
   /* ===== BUILD SIDE PANEL (initial) ===== */
+  /** Rebuilds the side panel for the currently chosen tool. */
   _buildSidePanel() {
     this._onToolChange('style');
   },
 
   /* ===== DRAW HEAD & HAIR ===== */
+  /** Redraws the head with hair, tinsel and any painted layers. */
   _drawHead() {
     const c = document.getElementById('salon-canvas');
     if (!c) return;
@@ -433,6 +451,7 @@ const Salon = {
     }
   },
 
+  /** Draws the back layer of the hair. */
   _drawSalonHairBack(ctx, cx, cy, r) {
     ctx.fillStyle = this.hairColor;
     const s = this.hairStyle;
@@ -465,6 +484,7 @@ const Salon = {
     }
   },
 
+  /** Draws the front layer of the hair. */
   _drawSalonHairFront(ctx, cx, cy, r) {
     ctx.fillStyle = this.hairColor;
     const s = this.hairStyle;
@@ -536,6 +556,7 @@ const Salon = {
   },
 
   /* ===== TINSEL ===== */
+  /** Draws tinsel strands over the hair. */
   _drawTinsel() {
     const c = document.getElementById('salon-canvas');
     if (!c) return;
@@ -574,6 +595,7 @@ const Salon = {
   },
 
   /* ===== FINISH ===== */
+  /** Completes the hairstyle and hands the result to the game. */
   finish() {
     // Save hair changes to character
     if (Game.state.character) {

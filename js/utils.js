@@ -1,11 +1,21 @@
+/*
+ * Program: Fashion - utils.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Shared helpers and constants: canvas, color, math, DOM and storage helpers plus the lists of garments, fabrics, stickers, levels and presets used across the game.
+ */
 /* ===== UTILS & CONSTANTS ===== */
+/** Utility namespace of small helper functions. */
 const U = {
   /* Canvas helpers */
+  /** Returns the 2D drawing context of a canvas by element id. */
   getCtx(id) { return document.getElementById(id).getContext('2d'); },
+  /** Clears the whole canvas with the given id. */
   clearCanvas(id) {
     const c = document.getElementById(id);
     c.getContext('2d').clearRect(0, 0, c.width, c.height);
   },
+  /** Resizes the canvas with the given id. */
   resizeCanvas(id) {
     const c = document.getElementById(id);
     const r = c.parentElement.getBoundingClientRect();
@@ -14,6 +24,7 @@ const U = {
   },
 
   /* Color conversions */
+  /** Converts hue, saturation and lightness to RGB. */
   hslToRgb(h, s, l) {
     s /= 100; l /= 100;
     const k = n => (n + h / 30) % 12;
@@ -21,17 +32,21 @@ const U = {
     const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
     return [Math.round(f(0)*255), Math.round(f(8)*255), Math.round(f(4)*255)];
   },
+  /** Converts red, green and blue values to a hex color string. */
   rgbToHex(r, g, b) {
     return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
   },
+  /** Converts hue, saturation and lightness to a hex color string. */
   hslToHex(h, s, l) {
     const [r, g, b] = U.hslToRgb(h, s, l);
     return U.rgbToHex(r, g, b);
   },
+  /** Converts a hex color string to RGB. */
   hexToRgb(hex) {
     const m = hex.match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
     return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [255,105,180];
   },
+  /** Converts a hex color string to hue, saturation and lightness. */
   hexToHsl(hex) {
     let [r, g, b] = U.hexToRgb(hex).map(x => x/255);
     const max = Math.max(r,g,b), min = Math.min(r,g,b);
@@ -50,24 +65,37 @@ const U = {
   },
 
   /* Math helpers */
+  /** Returns a random whole number from min to max, inclusive. */
   rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; },
+  /** Returns a random decimal from min up to max. */
   randFloat(min, max) { return Math.random() * (max - min) + min; },
+  /** Returns a random element of an array. */
   pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; },
+  /** Limits a value to the range min to max. */
   clamp(v, min, max) { return Math.max(min, Math.min(max, v)); },
+  /** Linear interpolation between a and b by t. */
   lerp(a, b, t) { return a + (b - a) * t; },
+  /** Distance between two points. */
   dist(x1, y1, x2, y2) { return Math.sqrt((x2-x1)**2 + (y2-y1)**2); },
 
   /* DOM helpers */
+  /** Shorthand for querySelector. */
   $(sel) { return document.querySelector(sel); },
+  /** Shorthand for querySelectorAll. */
   $$(sel) { return document.querySelectorAll(sel); },
+  /** Shows an element given as an element or selector. */
   show(el) { if (typeof el === 'string') el = U.$(el); if(el) el.style.display = ''; },
+  /** Hides an element given as an element or selector. */
   hide(el) { if (typeof el === 'string') el = U.$(el); if(el) el.style.display = 'none'; },
 
   /* Storage */
+  /** Saves data as JSON in local storage under a game-specific key prefix. */
   save(key, data) { try { localStorage.setItem('fashion_'+key, JSON.stringify(data)); } catch(e){} },
+  /** Loads and parses saved data, or null if missing or unreadable. */
   load(key) { try { return JSON.parse(localStorage.getItem('fashion_'+key)); } catch(e){ return null; } },
 
   /* Debounce */
+  /** Returns a version of fn that waits ms after the last call before running. */
   debounce(fn, ms) {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };

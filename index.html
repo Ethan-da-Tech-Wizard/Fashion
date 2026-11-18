@@ -1,4 +1,10 @@
 <!DOCTYPE html>
+<!--
+  Program: Fashion - index.html
+  Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+  Last Modified: 2026-11-18
+  Purpose: Single page shell for the Fashion game: declares every screen (menu, creator, studios, closet, customers) and loads the stylesheet and scripts in dependency order.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -15,6 +21,7 @@
   <div id="particles-container"></div>
 
   <!-- ===== MAIN MENU ===== -->
+  <!-- Screens: only the one with the active class is shown; Game.goTo switches between them -->
   <div id="menu-screen" class="screen active">
     <div class="menu-container">
       <h1 class="game-title shimmer-text">Fashion</h1>
@@ -313,6 +320,7 @@
     </div>
   </div>
 
+  <!-- Scripts load in dependency order: shared helpers first, game engine last -->
   <script src="js/utils.js"></script>
   <script src="js/icons.js"></script>
   <script src="js/sound.js"></script>

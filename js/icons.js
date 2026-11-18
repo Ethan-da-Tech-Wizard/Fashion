@@ -1,9 +1,18 @@
+/*
+ * Program: Fashion - icons.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Icon library: holds inline SVG path data for the UI icons and fills any element that has a data-icon attribute.
+ */
+/** Icon module: SVG paths by id plus helpers to render them. */
 const Icons = {
+  /** Returns an SVG string for an icon id at the given size and extra CSS classes, falling back to the star icon. */
   get(id, size = 24, classes = '') {
     const p = this.paths[id] || this.paths['star']; // fallback
     return `<svg class="fashion-icon ${classes}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   },
 
+  /** Map from icon id to the inner SVG markup for that icon. */
   paths: {
     /* GUI & Nav */
     'back': '<path d="M19 12H5M12 19l-7-7 7-7"/>',
@@ -51,6 +60,7 @@ const Icons = {
     'face': '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'
   },
   
+  /** Replaces the contents of every element with a data-icon attribute by its SVG icon. */
   init() {
     document.querySelectorAll('[data-icon]').forEach(el => {
       const id = el.getAttribute('data-icon');

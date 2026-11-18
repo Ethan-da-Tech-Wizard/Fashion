@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - makeup.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Makeup Studio: lets the player apply blush, eye shadow, lipstick, liner, lashes and highlights to a face drawn on a canvas.
+ */
 /* ===== MAKEUP STUDIO ===== */
+/** Makeup module: holds the makeup settings and the editor and face drawing logic. */
 const Makeup = {
   // Current makeup state
   blushColor: '#FFB6C1',
@@ -15,6 +22,7 @@ const Makeup = {
   // Custom makeup palette
   customPalette: [],
 
+  /** Sets up the canvas, tools and starting panel. */
   init() {
     const c = document.getElementById('makeup-canvas');
     if (!c) return;
@@ -36,6 +44,7 @@ const Makeup = {
   },
 
   /* ===== TOOL PANEL ===== */
+  /** Builds the tool buttons for the makeup editor. */
   _buildTools() {
     const tools = document.getElementById('makeup-tools');
     if (!tools) return;
@@ -71,6 +80,7 @@ const Makeup = {
     this._onToolChange('blush');
   },
 
+  /** Reacts to a tool change by showing its panel and updating the canvas. */
   _onToolChange(toolId) {
     const side = document.getElementById('makeup-side');
     if (!side) return;
@@ -106,6 +116,7 @@ const Makeup = {
   },
 
   /* ===== BLUSH PANEL ===== */
+  /** Builds the blush controls. */
   _buildBlushPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Blush';
@@ -133,6 +144,7 @@ const Makeup = {
   },
 
   /* ===== EYESHADOW PANEL ===== */
+  /** Builds the eye shadow controls. */
   _buildShadowPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Eyeshadow';
@@ -157,6 +169,7 @@ const Makeup = {
   },
 
   /* ===== LIPSTICK PANEL ===== */
+  /** Builds the lip color controls. */
   _buildLipPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Lipstick';
@@ -181,6 +194,7 @@ const Makeup = {
   },
 
   /* ===== LINER PANEL ===== */
+  /** Builds the eyeliner controls. */
   _buildLinerPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Eyeliner';
@@ -214,6 +228,7 @@ const Makeup = {
   },
 
   /* ===== LASHES PANEL ===== */
+  /** Builds the lashes controls. */
   _buildLashesPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Lashes';
@@ -239,6 +254,7 @@ const Makeup = {
   },
 
   /* ===== HIGHLIGHT/GLOW PANEL ===== */
+  /** Builds the highlight controls. */
   _buildHighlightPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Highlight & Glow';
@@ -264,6 +280,7 @@ const Makeup = {
   },
 
   /* ===== CUSTOM MAKEUP PANEL ===== */
+  /** Builds the custom color controls. */
   _buildCustomPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Custom Makeup';
@@ -333,6 +350,7 @@ const Makeup = {
   },
 
   /* ===== FREEHAND PANEL ===== */
+  /** Builds the freehand drawing controls. */
   _buildFreehandPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Freehand Paint';
@@ -361,6 +379,7 @@ const Makeup = {
   },
 
   /* ===== UI HELPERS ===== */
+  /** Creates a color button that calls onChange with the chosen color. */
   _makeColorBtn(color, onChange) {
     const btn = document.createElement('div');
     btn.className = 'color-pick-btn';
@@ -376,6 +395,7 @@ const Makeup = {
     return btn;
   },
 
+  /** Creates a grid of color swatches that call onClick when chosen. */
   _makeSwatchGrid(colors, onClick) {
     const grid = document.createElement('div');
     grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin:6px 0;';
@@ -390,6 +410,7 @@ const Makeup = {
     return grid;
   },
 
+  /** Creates a labeled range slider that calls onChange with its value. */
   _makeSlider(label, value, min, max, onChange) {
     const wrap = document.createElement('div');
     wrap.style.marginTop = '10px';
@@ -408,6 +429,7 @@ const Makeup = {
   },
 
   /* ===== DRAW THE FACE ===== */
+  /** Redraws the face with all the current makeup layers. */
   _drawFace() {
     const c = document.getElementById('makeup-canvas');
     if (!c) return;
@@ -695,6 +717,7 @@ const Makeup = {
   },
 
   /* ===== FINISH ===== */
+  /** Completes the look and hands the result to the game. */
   finish() {
     // Save makeup look to closet
     const c = document.getElementById('makeup-canvas');

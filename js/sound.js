@@ -1,17 +1,27 @@
+/*
+ * Program: Fashion - sound.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Sound effects: generates short tones and noise with the Web Audio API so the game needs no audio files.
+ */
 /* ===== SOUND EFFECTS (Web Audio API) ===== */
+/** Sound module: Web Audio context, mute switch and effect playback. */
 const Sound = {
   ctx: null,
   enabled: true,
 
+  /** Creates the audio context, ignoring failure if unsupported. */
   init() {
     try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
   },
 
+  /** Turns sound on or off. */
   toggle() {
     this.enabled = !this.enabled;
     document.getElementById('setting-sound').checked = this.enabled;
   },
 
+  /** Plays the named sound effect. */
   play(type) {
     if (!this.enabled || !this.ctx) return;
     try {
@@ -55,6 +65,7 @@ const Sound = {
     } catch(e) {}
   },
 
+  /** Plays a tone with a frequency, duration, wave type, volume and start delay. */
   _tone(freq, dur, type, vol, delay=0) {
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();
@@ -67,6 +78,7 @@ const Sound = {
     o.stop(this.ctx.currentTime + delay + dur + 0.01);
   },
 
+  /** Plays a burst of noise for the given duration and volume. */
   _noise(dur, vol) {
     const bufSize = this.ctx.sampleRate * dur;
     const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
@@ -81,6 +93,7 @@ const Sound = {
     src.start(); src.stop(this.ctx.currentTime + dur + 0.01);
   },
 
+  /** Plays a tone that glides from one frequency to another. */
   _sweep(f1, f2, dur, vol) {
     const o = this.ctx.createOscillator();
     const g = this.ctx.createGain();

@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - weather.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Weather effects: animates sunny, rainy and similar particle weather on a background canvas.
+ */
 /* ===== WEATHER SYSTEM ===== */
+/** Weather module: current weather and the particle animation. */
 const Weather = {
   current: 'sunny',
   particles: [],
@@ -6,6 +13,7 @@ const Weather = {
   ctx: null,
   _raf: null,
 
+  /** Sets up the canvas and starts the animation. */
   init() {
     this.canvas = document.getElementById('weather-canvas');
     this.ctx = this.canvas.getContext('2d');
@@ -15,11 +23,13 @@ const Weather = {
     this._loop();
   },
 
+  /** Resizes the canvas to the window. */
   _resize() {
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
   },
 
+  /** Switches to the given weather type. */
   set(type) {
     this.current = type;
     this.particles = [];
@@ -35,6 +45,7 @@ const Weather = {
     }
   },
 
+  /** Advances to the next weather type. */
   cycle() {
     const types = ['sunny', 'rainy', 'snowy'];
     const idx = (types.indexOf(this.current) + 1) % types.length;
@@ -42,6 +53,7 @@ const Weather = {
     Sound.play('whoosh');
   },
 
+  /** Creates a particle, optionally at a random height. */
   _newParticle(randomY = false) {
     const w = this.canvas.width;
     const h = this.canvas.height;
@@ -67,12 +79,14 @@ const Weather = {
     return {};
   },
 
+  /** Runs one animation frame and schedules the next. */
   _loop() {
     this._update();
     this._draw();
     this._raf = requestAnimationFrame(() => this._loop());
   },
 
+  /** Moves all particles. */
   _update() {
     if (this.current === 'sunny') return;
     const h = this.canvas.height;
@@ -93,6 +107,7 @@ const Weather = {
     }
   },
 
+  /** Draws the weather particles. */
   _draw() {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);

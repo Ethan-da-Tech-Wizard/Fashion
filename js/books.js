@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - books.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Book Shop station: lets the player design a book cover (colors, title, stickers, decorations) on a canvas and save it as a finished item.
+ */
 /* ===== BOOK SHOP ===== */
+/** Book Shop module: holds the in-progress book design and the UI/drawing logic for the book cover editor. */
 const Books = {
   bookTitle: '',
   bookGenre: null,
@@ -6,6 +13,7 @@ const Books = {
   bookAccentColor: '#FFD700',
   isRandom: false,
 
+  /** Sets up the book canvas, tool list and default side panel when the station opens. */
   init() {
     const c = document.getElementById('books-canvas');
     if (!c) return;
@@ -22,6 +30,7 @@ const Books = {
   },
 
   /* ===== TOOLS ===== */
+  /** Builds the tool buttons (create, cover, decorate, stickers, title) for the book editor. */
   _buildTools() {
     const tools = document.getElementById('books-tools');
     if (!tools) return;
@@ -52,6 +61,7 @@ const Books = {
     });
   },
 
+  /** Fills the side panel with the controls for the chosen tool. */
   _buildSidePanel(toolId) {
     const side = document.getElementById('books-side');
     if (!side) return;
@@ -68,6 +78,7 @@ const Books = {
   },
 
   /* ===== CREATE PANEL ===== */
+  /** Builds the panel for choosing a book genre and starting a design. */
   _buildCreatePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Book Genre';
@@ -107,6 +118,7 @@ const Books = {
   },
 
   /* ===== COVER PANEL ===== */
+  /** Builds the panel for choosing cover and accent colors. */
   _buildCoverPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Cover Color';
@@ -172,6 +184,7 @@ const Books = {
   },
 
   /* ===== DECORATE PANEL ===== */
+  /** Builds the panel with decoration options for the cover. */
   _buildDecoratePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Paint on Cover';
@@ -241,6 +254,7 @@ const Books = {
   },
 
   /* ===== STICKER PANEL ===== */
+  /** Builds the sticker picker panel. */
   _buildStickerPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Book Stickers';
@@ -270,6 +284,7 @@ const Books = {
   },
 
   /* ===== TITLE PANEL ===== */
+  /** Builds the panel for typing or choosing a book title. */
   _buildTitlePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Book Title';
@@ -309,6 +324,7 @@ const Books = {
     });
   },
 
+  /** Returns a list of title suggestions for the current design. */
   _getTitleSuggestions() {
     const genreTitles = {
       Fantasy: ['The Crystal Kingdom', 'Dragon\'s Gift', 'Enchanted Threads', 'Moonlit Spells'],
@@ -326,6 +342,7 @@ const Books = {
   },
 
   /* ===== RANDOM BOOK ===== */
+  /** Generates a random book design and refreshes the side panel. */
   _generateRandom(side) {
     this.isRandom = true;
     this.bookGenre = U.pick(BOOK_GENRES);
@@ -367,6 +384,7 @@ const Books = {
   },
 
   /* ===== DRAW BOOK ===== */
+  /** Redraws the whole book cover on the canvas from the current settings. */
   _drawBook() {
     const c = document.getElementById('books-canvas');
     if (!c || !this.bookGenre) return;
@@ -478,6 +496,7 @@ const Books = {
     ctx.stroke();
   },
 
+  /** Traces a rounded-rectangle path on the given canvas context (x, y, width, height, corner radius). */
   _roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -489,6 +508,7 @@ const Books = {
   },
 
   /* ===== FINISH ===== */
+  /** Completes the book design and hands the result to the game (rewards and closet). */
   finish() {
     if (!this.bookGenre) {
       Sound.play('error');

@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - tools.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Drawing tools: handles pointer input on a canvas and implements brush, spray, glitter, sticker, badge, pearl, cut, stencil, eraser and fill tools.
+ */
 /* ===== DRAWING TOOLS ===== */
+/** Drawing tools module: current tool state and the pointer handlers. */
 const Tools = {
   currentTool: null,
   currentColor: '#ff69b4',
@@ -10,6 +17,7 @@ const Tools = {
   _glitterParticles: [],
 
   /* Setup canvas interaction for a given canvas */
+  /** Attaches pointer handlers to the named canvas. */
   setup(canvasId) {
     const c = document.getElementById(canvasId);
     if (!c) return;
@@ -24,6 +32,7 @@ const Tools = {
     newC.addEventListener('mouseleave', () => this._painting = false);
   },
 
+  /** Converts a pointer event to canvas coordinates. */
   _getPos(e, c) {
     const rect = c.getBoundingClientRect();
     return {
@@ -32,6 +41,7 @@ const Tools = {
     };
   },
 
+  /** Handles pointer press for the current tool. */
   _onDown(e, c) {
     const pos = this._getPos(e, c);
     this._painting = true;
@@ -83,6 +93,7 @@ const Tools = {
     }
   },
 
+  /** Handles pointer movement for the current tool. */
   _onMove(e, c) {
     if (!this._painting) return;
     const pos = this._getPos(e, c);
@@ -114,6 +125,7 @@ const Tools = {
   },
 
   /* ===== BRUSH ===== */
+  /** Draws a brush dab. */
   _drawBrush(ctx, x, y) {
     ctx.fillStyle = this.currentColor;
     ctx.beginPath();
@@ -121,6 +133,7 @@ const Tools = {
     ctx.fill();
   },
 
+  /** Draws a brush stroke between two points. */
   _drawBrushLine(ctx, x1, y1, x2, y2) {
     ctx.strokeStyle = this.currentColor;
     ctx.lineWidth = this.brushSize * 2;
@@ -133,6 +146,7 @@ const Tools = {
   },
 
   /* ===== SPRAY PAINT ===== */
+  /** Draws a spray-paint scatter. */
   _drawSpray(ctx, x, y) {
     const density = 30;
     const radius = this.brushSize * 3;
@@ -152,6 +166,7 @@ const Tools = {
   },
 
   /* ===== GLITTER ===== */
+  /** Draws glitter sparkles. */
   _drawGlitter(ctx, x, y) {
     const count = 15;
     const radius = this.brushSize * 2.5;
@@ -185,6 +200,7 @@ const Tools = {
 
   /* ===== STICKER ===== */
   currentSticker: '⭐',
+  /** Places the chosen sticker. */
   _placeSticker(ctx, x, y) {
     const size = this.brushSize * 3;
     ctx.font = `${size}px serif`;
@@ -196,6 +212,7 @@ const Tools = {
 
   /* ===== BADGE ===== */
   currentBadge: '🏆',
+  /** Places the chosen badge. */
   _placeBadge(ctx, x, y) {
     const size = this.brushSize * 4;
     ctx.font = `${size}px serif`;
@@ -206,6 +223,7 @@ const Tools = {
   },
 
   /* ===== PEARL ===== */
+  /** Draws a pearl. */
   _drawPearl(ctx, x, y) {
     const size = this.brushSize * 0.6;
     // Pearl with shine
@@ -225,6 +243,7 @@ const Tools = {
   },
 
   /* ===== CUT TOOL ===== */
+  /** Draws a cut mark. */
   _drawCut(ctx, x, y) {
     ctx.strokeStyle = 'rgba(255,255,255,0.8)';
     ctx.lineWidth = 2;
@@ -239,6 +258,7 @@ const Tools = {
   /* ===== STENCIL ===== */
   currentStencil: 0,
   stencilColors: ['#ff69b4', '#ffd700', '#3edbd5', '#b36bff'],
+  /** Draws the chosen stencil shape. */
   _drawStencil(ctx, x, y) {
     if (STENCIL_SETS[this.currentStencil]) {
       // Use up to 4 colors
@@ -250,6 +270,7 @@ const Tools = {
   },
 
   /* ===== ERASER ===== */
+  /** Erases at a point. */
   _erase(ctx, x, y) {
     ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
@@ -259,6 +280,7 @@ const Tools = {
   },
 
   /* ===== FLOOD FILL ===== */
+  /** Fills the connected region around a starting pixel with a color. */
   _floodFill(ctx, canvas, startX, startY, fillColor) {
     const w = canvas.width, h = canvas.height;
     const imageData = ctx.getImageData(0, 0, w, h);
@@ -297,12 +319,15 @@ const Tools = {
   },
 
   /* ===== UTILITY ===== */
+  /** Forgets the list of placed items. */
   clearPlaced() { this._placedItems = []; },
 
+  /** Sets the current drawing color. */
   setColor(hex) {
     this.currentColor = hex;
   },
 
+  /** Opens the color wheel and passes the chosen color to the callback. */
   openColorPicker(callback) {
     ColorWheel.setFromHex(this.currentColor);
     ColorWheel.open('tool color', hex => {

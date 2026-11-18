@@ -1,4 +1,11 @@
+/*
+ * Program: Fashion - colorwheel.js
+ * Programmer: Ethan-da-Tech-Wizard (written with Claude, an AI assistant)
+ * Last Modified: 2026-11-18
+ * Purpose: Color wheel picker: draws a hue/saturation wheel on a canvas, tracks the chosen color and reports it back through a callback.
+ */
 /* ===== COLOR WHEEL ===== */
+/** Color picker module: wheel drawing, drag handling, recent colors and presets. */
 const ColorWheel = {
   canvas: null, ctx: null,
   hue: 330, sat: 100, light: 50,
@@ -7,6 +14,7 @@ const ColorWheel = {
   recentColors: [],
   _dragging: false,
 
+  /** Finds the picker elements and wires up their events. */
   init() {
     this.canvas = document.getElementById('cw-canvas');
     this.ctx = this.canvas.getContext('2d');
@@ -17,6 +25,7 @@ const ColorWheel = {
     this._drawWheel();
   },
 
+  /** Opens the picker for a target and registers the callback to receive the color. */
   open(target, callback) {
     this.target = target;
     this.callback = callback;
@@ -27,10 +36,12 @@ const ColorWheel = {
     this._updatePreview();
   },
 
+  /** Closes the picker without applying a color. */
   close() {
     document.getElementById('colorwheel-modal').classList.remove('active');
   },
 
+  /** Applies the chosen color through the callback and closes the picker. */
   confirm() {
     const hex = this.getHex();
     if (!this.recentColors.includes(hex)) {
@@ -43,14 +54,17 @@ const ColorWheel = {
     this.close();
   },
 
+  /** Returns the current color as a hex string. */
   getHex() {
     return U.hslToHex(this.hue, this.sat, this.light);
   },
 
+  /** Returns the current color as hue, saturation and lightness. */
   getHSL() {
     return { h: this.hue, s: this.sat, l: this.light };
   },
 
+  /** Redraws the wheel and preview after the color changes. */
   update() {
     this.light = parseInt(document.getElementById('cw-brightness').value);
     this.sat = parseInt(document.getElementById('cw-saturation').value);
@@ -58,6 +72,7 @@ const ColorWheel = {
     this._updatePreview();
   },
 
+  /** Reads the hex input field and updates the color from it. */
   fromHex() {
     const hex = document.getElementById('cw-hex').value;
     if (/^#[0-9a-f]{6}$/i.test(hex)) {
@@ -70,6 +85,7 @@ const ColorWheel = {
     }
   },
 
+  /** Sets the current color from a hex string. */
   setFromHex(hex) {
     const [h, s, l] = U.hexToHsl(hex);
     this.hue = h; this.sat = s; this.light = l;
@@ -79,6 +95,7 @@ const ColorWheel = {
     this._updatePreview();
   },
 
+  /** Paints the color wheel onto the canvas and marks the current selection. */
   _drawWheel() {
     const c = this.canvas, ctx = this.ctx;
     const cx = c.width/2, cy = c.height/2;
@@ -154,15 +171,18 @@ const ColorWheel = {
     ctx.stroke();
   },
 
+  /** Starts a drag on the wheel. */
   _onDown(e) {
     this._dragging = true;
     this._pick(e);
   },
 
+  /** Continues a drag on the wheel. */
   _onMove(e) {
     if (this._dragging) this._pick(e);
   },
 
+  /** Converts a pointer position into a color on the wheel. */
   _pick(e) {
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -189,6 +209,7 @@ const ColorWheel = {
     }
   },
 
+  /** Updates the preview swatch and text fields. */
   _updatePreview() {
     const hex = this.getHex();
     document.getElementById('cw-preview').style.background = hex;
@@ -203,6 +224,7 @@ const ColorWheel = {
     }
   },
 
+  /** Draws the list of recently used colors. */
   _renderRecent() {
     const cont = document.getElementById('cw-recent');
     cont.innerHTML = '';
@@ -215,6 +237,7 @@ const ColorWheel = {
     });
   },
 
+  /** Loads the preset color swatches for the given target. */
   _loadPresets(target) {
     const cont = document.getElementById('cw-presets');
     cont.innerHTML = '';
