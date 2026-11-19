@@ -57,8 +57,11 @@ const Salon = {
    * Initializes Hair Salon canvas dimensions, synchronizes player hair model, and builds toolbars.
    */
   init() {
+    // The canvas is looked up by id on every call rather than cached, because Tools.setup() replaces the element with a clone and a cached reference would point at the old, detached canvas.
     const c = document.getElementById('salon-canvas');
     if (!c) return;
+
+    // The parent (.studio-layout) is measured, not the canvas, because the canvas's own size is what is being decided.
     const parent = c.parentElement;
     const rect = parent.getBoundingClientRect();
 
@@ -71,6 +74,7 @@ const Salon = {
     // Start from the player's real hair so the salon edits what they created. Falls back to the defaults if the
     // saved character lacks hair data.
     if (Game.state.character) {
+      // `||` keeps the previous defaults when an older save has no hair fields.
       this.hairColor = Game.state.character.hairColor || '#3d2b1f';
       this.hairStyle = Game.state.character.hairStyle || 'long';
     }
@@ -91,6 +95,8 @@ const Salon = {
   _buildTools() {
     const tools = document.getElementById('salon-tools');
     if (!tools) return;
+
+    // Clear first: init() runs every time the screen opens and must not duplicate buttons.
     tools.innerHTML = '';
 
     // Each entry: id (used by _onToolChange), icon (key in Icons.paths) and label shown under the icon.
@@ -109,7 +115,11 @@ const Salon = {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
+
+      // Stack the icon above its label (the .tool-btn rule lays children out in a row by default).
       btn.style.flexDirection = 'column';
+
+      // Tooltip and accessible name for the icon button.
       btn.title = t.label;
 
       // Move the highlight to the clicked button, play a click and switch the side panel.
@@ -131,9 +141,12 @@ const Salon = {
   _onToolChange(toolId) {
     const side = document.getElementById('salon-side');
     if (!side) return;
+
+    // Every tool shows a different panel, so the old one is discarded completely.
     side.innerHTML = '';
 
     if (toolId === 'style') {
+      // Each branch builds a panel; only 'freehand' also needs the shared Tools set up for drawing.
       this._buildStylePanel(side);
     } else if (toolId === 'dye') {
       this._buildDyePanel(side);
@@ -147,6 +160,8 @@ const Salon = {
     // Freehand drawing uses the shared 'dye' brush on this canvas (Tools.setup clears the canvas, see the file overview).
     } else if (toolId === 'freehand') {
       this._buildFreehandPanel(side);
+
+      // The freehand tool is the shared 'dye' brush; it is applied to this canvas by the setup call below.
       Tools.currentTool = 'dye';
       Tools.setup('salon-canvas');
     } else if (toolId === 'eraser') {
@@ -154,6 +169,8 @@ const Salon = {
       // Reset to base
       this._drawHead();
       Sound.play('whoosh');
+
+      // Panel heading; .side-panel h4 in style.css gives it the gradient bar.
       const h4 = document.createElement('h4');
       h4.textContent = 'Reset!';
       side.appendChild(h4);
@@ -173,20 +190,27 @@ const Salon = {
     h4.textContent = 'Hair Style';
     side.appendChild(h4);
 
+    // .item-grid lays the style cells out in as many columns as fit the 220 px panel.
     const grid = document.createElement('div');
     grid.className = 'item-grid';
     HAIR_STYLES.forEach(h => {
       const cell = document.createElement('div');
+
+      // Mark the current style as selected when the panel is built.
       cell.className = 'item-cell' + (this.hairStyle === h ? ' active' : '');
       
       const mc = document.createElement('canvas');
       mc.width = 36; mc.height = 36;
+
+      // Block + auto margins centre the 36 px thumbnail inside the cell (a canvas is inline by default).
       mc.style.display = 'block'; mc.style.margin = '0 auto';
 
       // The `window.Character` check only protects against the character script failing to load.
       if (window.Character) Character._drawMiniHairPreview(mc.getContext('2d'), h, 18, 18, this.hairColor);
       
       const lbl = document.createElement('div');
+
+      // Tiny 9 px muted caption with the style id, so styles can be told apart by name as well as by picture.
       lbl.style.cssText = 'font-size:9px;color:var(--text-muted);text-align:center;margin-top:4px;';
       lbl.textContent = h;
       
@@ -196,6 +220,8 @@ const Salon = {
         this.hairStyle = h;
         grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));
         cell.classList.add('active');
+
+        // A scissors snip sound suits a haircut; other tools use 'paint' or 'click'.
         Sound.play('snip');
         this._drawHead();
       };
@@ -213,6 +239,7 @@ const Salon = {
     h4.textContent = 'Hair Color';
     side.appendChild(h4);
 
+    // Swatch button showing the current hair colour; its background is updated by the wheel callback and by the presets below.
     const colorBtn = document.createElement('div');
     colorBtn.className = 'color-pick-btn';
     colorBtn.style.background = this.hairColor;
@@ -228,12 +255,14 @@ const Salon = {
     };
     side.appendChild(colorBtn);
 
+    // The presets are applied directly (no wheel), so they stay one click away.
     // Preset hair colors
     const label2 = document.createElement('h4');
     label2.textContent = 'Presets';
     label2.style.marginTop = '12px';
     side.appendChild(label2);
 
+    // Wrapping flex row with 5 px gaps for the swatches.
     const presets = document.createElement('div');
     presets.style.cssText = 'display:flex;flex-wrap:wrap;gap:5px;';
 
@@ -245,7 +274,11 @@ const Salon = {
       const sw = document.createElement('div');
       sw.className = 'cw-recent-swatch';
       sw.style.background = c;
+
+      // The .cw-recent-swatch class does not set a pointer cursor in every context, so it is set here to show the swatch is clickable.
       sw.style.cursor = 'pointer';
+
+      // Apply immediately: store the colour, update the big swatch, paint sound, redraw the head with the new colour.
       sw.onclick = () => {
         this.hairColor = c;
         colorBtn.style.background = c;
@@ -286,11 +319,14 @@ const Salon = {
 
     // Brush size 2 to 20 px (radius) starting at 6.
     // Size slider
+    // Brush size heading.
     const label = document.createElement('h4');
     label.textContent = 'Brush Size';
     label.style.marginTop = '12px';
     side.appendChild(label);
     const slider = document.createElement('input');
+
+    // Range inputs report strings; the handler converts with parseInt before storing in Tools.brushSize.
     slider.type = 'range'; slider.min = '2'; slider.max = '20'; slider.value = '6';
     slider.style.cssText = 'width:100%;accent-color:var(--accent-pink);';
     slider.oninput = () => { Tools.brushSize = parseInt(slider.value); };
@@ -304,6 +340,8 @@ const Salon = {
     // Switch the shared tools to the round brush at size 6 and attach the mouse handlers to the salon canvas
     // (this replaces the canvas element and blanks it, see the file overview).
     Tools.currentTool = 'dye';
+
+    // Highlights are thin streaks, so the size is reset to 6 px each time this panel opens.
     Tools.brushSize = 6;
     Tools.setup('salon-canvas');
   },
@@ -319,6 +357,8 @@ const Salon = {
 
     const colorBtn = document.createElement('div');
     colorBtn.className = 'color-pick-btn';
+
+    // Swatch button shows the tinsel colour (separate from the hair colour).
     colorBtn.style.background = this.tinselColor;
     colorBtn.onclick = () => {
       ColorWheel.setFromHex(this.tinselColor);
@@ -348,6 +388,8 @@ const Salon = {
     addBtn.className = 'btn btn-accent';
     addBtn.style.cssText = 'margin-top:14px;width:100%;';
     addBtn.textContent = '✨ Add Tinsel Strands';
+
+    // Add: switch tinsel on and draw a fresh set of strands over the current picture (without clearing).
     addBtn.onclick = () => {
       this.tinselOn = true;
       this._drawTinsel();
@@ -378,6 +420,7 @@ const Salon = {
     h4.textContent = 'Hair Accessories';
     side.appendChild(h4);
 
+    // Twelve emoji used as hair clips: bow, flowers, butterfly, gem, star, crown, moon, heart, strawberry, rainbow, and so on.
     const accessories = ['🎀','🌸','🦋','💎','⭐','🌺','💫','👑','🌙','❤️','🍓','🌈'];
     const grid = document.createElement('div');
     grid.className = 'item-grid';
@@ -390,6 +433,8 @@ const Salon = {
         Tools.currentSticker = a;
         Tools.currentTool = 'sticker';
         Tools.brushSize = 8;
+
+        // Attach (or re-attach) the mouse handlers for the sticker tool; this clones the canvas (see the file overview).
         Tools.setup('salon-canvas');
         grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));
         cell.classList.add('active');
@@ -421,6 +466,7 @@ const Salon = {
     };
     side.appendChild(colorBtn);
 
+    // Eight quick colours for freehand drawing, ending in white and black.
     const quickColors = ['#FF69B4','#FF6347','#FFD700','#32CD32','#1E90FF','#9370DB','#FFFFFF','#000000'];
     const qGrid = document.createElement('div');
     qGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;';
@@ -447,6 +493,7 @@ const Salon = {
   /* ===== BUILD SIDE PANEL (initial) ===== */
   // Initial side panel when the salon opens (the style grid).
   _buildSidePanel() {
+    // The salon always opens on the style tool.
     this._onToolChange('style');
   },
 
@@ -464,7 +511,11 @@ const Salon = {
     // Head centre: horizontally centred and 20 px below the middle so there is room for hair and shoulders. The head is
     // a circle of radius 90.
     const cx = w/2, cy = h/2 + 20;
+
+    // Head radius in pixels; all feature offsets in this routine are written relative to it or to the centre.
     const headR = 90;
+
+    // Prefer the saved character; fall back to the creator's in-progress data when no game exists yet.
     const charData = Game.state.character || Character.data;
 
     // Fall back to defaults when the data is missing a field (older saves).
@@ -473,12 +524,16 @@ const Salon = {
     // Neck: a 30x60 rectangle starting at 65% of the head radius below the centre so it tucks behind the head.
     // Neck
     ctx.fillStyle = skinColor;
+
+    // Neck rectangle: 30 px wide, 60 px tall, starting inside the lower head so the join is hidden by the head drawn later.
     ctx.fillRect(cx - 15, cy + headR*0.65, 30, 60);
 
     // Shoulders: an ellipse of the outfit's top colour below the head.
     // Shoulders hint
     ctx.fillStyle = charData.outfit?.top || '#ff69b4';
     ctx.beginPath();
+
+    // A 70x30 ellipse just below the chin suggests shoulders; it is drawn before the head so it sits behind it.
     ctx.ellipse(cx, cy + headR + 50, 70, 30, 0, 0, Math.PI*2);
     ctx.fill();
 
@@ -504,6 +559,7 @@ const Salon = {
     // Each eye: white disc, faint outline, coloured iris, dark pupil and a small highlight; positions are 25 px either
     // side of the centre. (A single `ex` offset of -25 and +25 draws both.)
     // Simple eyes
+    // Eye colour from the saved character.
     const eyeColor = charData.eyeColor || '#4a90d9';
     const eyeY = cy + 5;
     [-25, 25].forEach(ex => {
@@ -520,12 +576,14 @@ const Salon = {
 
     // A single darker-skin dot (skin colour 12 lightness points darker).
     // Nose
+    // Nose colour: skin darkened by 12 lightness points.
     const skinDark = Character._darken(skinColor, 12);
     ctx.fillStyle = skinDark;
     ctx.beginPath(); ctx.arc(cx, cy + 22, 4, 0, Math.PI*2); ctx.fill();
 
     // A smiling arc: the lower part of a 12 px circle, from 0.15 pi to 0.85 pi.
     // Mouth
+    // Mouth colour: a plain red stroke, drawn as a smile arc.
     ctx.strokeStyle = '#e74c3c';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
@@ -541,6 +599,7 @@ const Salon = {
 
     // Eyebrows follow the hair colour (darkened) so changing the dye changes them too.
     // Eyebrows
+    // Eyebrows use the hair colour so dyeing changes them as well.
     ctx.strokeStyle = Character._darken(this.hairColor, 10);
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(cx-35, eyeY-18); ctx.quadraticCurveTo(cx-25, eyeY-24, cx-15, eyeY-18); ctx.stroke();
@@ -551,6 +610,7 @@ const Salon = {
     this._drawSalonHairFront(ctx, cx, cy, headR);
 
     // Tinsel overlay
+    // Tinsel goes on top of the front hair so the strands hang over it.
     if (this.tinselOn) {
       this._drawTinsel();
     }
@@ -564,6 +624,8 @@ const Salon = {
   // @param {number} r - Head radius in pixels.
   _drawSalonHairBack(ctx, cx, cy, r) {
     ctx.fillStyle = this.hairColor;
+
+    // Short alias for the style id used in the comparisons below.
     const s = this.hairStyle;
 
     // Long hair: a curtain from the sides of the head down to 2.2 head radii below the centre.
@@ -644,6 +706,7 @@ const Salon = {
     // Curly/afro: a ring of overlapping circles around the top half of the head (afro radius 1.35 x, curly 1.15 x)
     // plus one on each side.
     if (s === 'curly' || s === 'afro') {
+      // Ring radius multiplier: the afro stands out further than curly hair.
       const er = s === 'afro' ? 1.35 : 1.15;
       for (let a = -0.3; a > -Math.PI - 0.3; a -= 0.35) {
         ctx.beginPath();
@@ -682,6 +745,8 @@ const Salon = {
     // Hair detail line
     if (['long','wavy','straight','sidepart','bob'].includes(s)) {
       ctx.strokeStyle = Character._darken(this.hairColor, 12);
+
+      // Thin line so the strand arc reads as a subtle detail.
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.arc(cx, cy - r*0.05, r*0.88, 0.82*Math.PI, 0.18*Math.PI, true);
@@ -702,6 +767,7 @@ const Salon = {
     // Head radius, the same value as in _drawHead (duplicated).
     const r = 90;
 
+    // Strand colour and line width; strokes are translucent (0.7) so the hair beneath shows.
     ctx.strokeStyle = this.tinselColor;
     ctx.lineWidth = 1.5;
 
@@ -720,8 +786,11 @@ const Salon = {
 
       ctx.beginPath();
       ctx.moveTo(sx, sy);
+
+      // The strand's current end point; starts at its anchor and drifts downward.
       let px = sx, py = sy;
       for (let j = 0; j < 8; j++) {
+        // Each segment moves a random -6..+6 px sideways and an even len/8 down, producing a wavy hanging strand.
         px += (Math.random()-0.5) * 12;
         py += len / 8;
         ctx.lineTo(px, py);
@@ -747,6 +816,7 @@ const Salon = {
     // creator) it wears the new hair.
     // Save hair changes to character
     if (Game.state.character) {
+      // Both the saved copy and the live Character.data object are updated because the saved copy is what gets stored on disk and the live one is what the creator and workshop draw from.
       Game.state.character.hairColor = this.hairColor;
       Game.state.character.hairStyle = this.hairStyle;
       Character.data.hairColor = this.hairColor;
@@ -757,17 +827,21 @@ const Salon = {
     // Save salon result to closet
     const c = document.getElementById('salon-canvas');
     if (c) {
+      // Export the canvas as a PNG data URL, a text string that can be stored in JSON and used directly as an <img> src.
       const imageData = c.toDataURL('image/png');
       Game.addToCloset({
         id: Date.now(),
         type: 'hair',
         subtype: this.hairStyle,
+
+        // Closet label: the style id with its first letter capitalised, followed by " Hairstyle".
         name: this.hairStyle.charAt(0).toUpperCase() + this.hairStyle.slice(1) + ' Hairstyle',
         image: imageData,
         createdAt: Date.now(),
       });
     }
 
+    // Reward feedback: jingle plus 60 XP.
     Sound.play('complete');
 
     // Award XP and save. The explicit Game.save() is redundant (addXP already saves) but harmless.
