@@ -28,7 +28,8 @@
 //     the device disappear; the canvas is now kept. The device still cannot be recoloured without losing the decoration.
 //   - (Fixed) Icons.get() is called with 'phone', 'tablet' and 'airpods'; icons.js now defines them (the picker
 //     used to show the fallback star).
-//   - finish() awards 50 XP even when no device was chosen (nothing is added to the closet then).
+//   - (Fixed) finish() used to award 50 XP even when no device was chosen; it now plays the error sound and stays
+//     on the screen (like Books.finish) so XP is only given for a saved item.
 // How to test: Game.goTo('tech'); Tech.deviceType = 'phone'; Tech._drawDevice() in the console.
 // ==============================================================================
 /* ===== TECH WORKSHOP WORKSTATION ===== */
@@ -561,8 +562,16 @@ const Tech = {
   finish() {
     const c = document.getElementById('tech-canvas');
 
-    // Only store an item when a device was actually chosen. The XP below is awarded regardless.
-    if (c && this.deviceType) {
+    // Nothing to save without a canvas and a chosen device. Before the fix the XP below was awarded anyway, so
+    // pressing Done repeatedly on an empty screen farmed 50 XP per click; now the player gets the error sound and
+    // stays on the screen to pick a device (the same behaviour as Books.finish).
+    if (!c || !this.deviceType) {
+      Sound.play('error');
+      return;
+    }
+
+    // From here an item definitely exists, so saving it and paying the XP always go together.
+    {
       const imageData = c.toDataURL('image/png');
       const d = DEVICE_TYPES.find(t => t.id === this.deviceType);
       Game.addToCloset({

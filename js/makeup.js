@@ -905,7 +905,17 @@ const Makeup = {
   finish() {
     // Save makeup look to closet
     const c = document.getElementById('makeup-canvas');
-    if (c) {
+
+    // Without a canvas there is no look to save. The XP below used to be awarded anyway; now the player gets the
+    // error sound and stays on the screen (the same behaviour as Books.finish). With a canvas an item is ALWAYS
+    // saved ("Natural Look" when no cosmetic is on), so a normal Done still pays 45 XP.
+    if (!c) {
+      Sound.play('error');
+      return;
+    }
+
+    // From here an item definitely exists, so saving it and paying the XP always go together.
+    {
       const imageData = c.toDataURL('image/png');
 
       // Build the item's name from the cosmetics used (for example "Blush + Lip Look"), or "Natural Look" if none.

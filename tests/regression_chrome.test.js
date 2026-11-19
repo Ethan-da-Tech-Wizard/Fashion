@@ -111,8 +111,11 @@ tests.noEmptyXP = async p => {
     const mc = document.getElementById('makeup-canvas'); mc.id = 'makeup-canvas-x';
     Makeup.finish(); mc.id = 'makeup-canvas'; out.makeup = Game.state.xp;
     out.closet = Game.state.closet.length;
+    // Positive control: a real item must still pay (tech 50 XP) and be stored, so the guard is not over-eager.
+    Tech.deviceType = 'phone'; Tech.finish(); out.techReal = Game.state.xp; out.closetReal = Game.state.closet.length;
     return out;
   })()`);
+  assert(r.techReal === 50 && r.closetReal === 1, 'a real tech item no longer pays: ' + JSON.stringify(r));
   assert(r.tech === 0 && r.decor === 0 && r.makeup === 0 && r.closet === 0, 'XP/closet after empty Done: ' + JSON.stringify(r));
 };
 

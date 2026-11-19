@@ -31,7 +31,8 @@
 //   - (Fixed) Icons.get() is called with 'blanket', 'pillow' and 'rug'; icons.js now defines them (they used to
 //     show the fallback star).
 //   - Tassels and fringe use Math.random on every redraw, so they look slightly different each time.
-//   - finish() awards 45 XP even if no item was chosen (nothing is added to the closet then).
+//   - (Fixed) finish() used to award 45 XP even if no item was chosen; it now plays the error sound and stays
+//     on the screen (like Books.finish) so XP is only given for a saved item.
 // How to test: Game.goTo('decor'); Decor.decorType = 'rug'; Decor.patternType = 'stars'; Decor._drawDecorItem().
 // ==============================================================================
 /* ===== HOME DECOR STUDIO WORKSTATION ===== */
@@ -728,8 +729,16 @@ const Decor = {
   finish() {
     const c = document.getElementById('decor-canvas');
 
-    // Only add a closet item when an item was actually chosen; the XP below is awarded regardless.
-    if (c && this.decorType) {
+    // Nothing to save without a canvas and a chosen item. The XP below used to be awarded regardless, so pressing
+    // Done on an empty screen farmed 45 XP per click; now the player gets the error sound and stays to pick an item
+    // (the same behaviour as Books.finish).
+    if (!c || !this.decorType) {
+      Sound.play('error');
+      return;
+    }
+
+    // From here an item definitely exists, so saving it and paying the XP always go together.
+    {
       const imageData = c.toDataURL('image/png');
       const d = DECOR_TYPES.find(t => t.id === this.decorType);
       Game.addToCloset({
