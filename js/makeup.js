@@ -6,9 +6,43 @@
 //          Renders high-detail facial canvas features, manages alpha-blended cosmetic
 //          layers (blush gradients, eye shadow shading, lip tints, winged eyeliner,
 //          volumetric eyelashes, and cheekbone highlights), and persists cosmetic styles.
+// FILE OVERVIEW
+// makeup.js is the Makeup Studio station (#makeup-screen in index.html). The player sees a
+// large front-facing face (the saved character's skin, hair, eye and outfit colours) and applies
+// cosmetic layers: blush, eyeshadow, lipstick, eyeliner (with a wing), lashes, a highlight glow,
+// custom shades, and freehand paint. "Done" stores a picture of the finished look in the closet.
+//
+// How it works: the face is NOT edited incrementally. All settings live as plain fields on the
+// Makeup object (colours, opacities, on/off flags), and _drawFace() repaints the entire face from
+// those fields every time any of them changes. That makes every change reversible and keeps the
+// drawing code in one place; the cost is that freehand paint (drawn directly on the canvas) is
+// erased by the next repaint.
+//
+// Who calls it: Game.goTo('makeup') calls Makeup.init(); the Done button calls Makeup.finish().
+// It reads Game.state.character and Character.data, and uses Character._darken, Tools (freehand
+// painting), ColorWheel, Icons, Sound and Game (addToCloset, addXP, save, checkLevelUp, goTo).
+//
+// Layout: the same three columns as the other stations: #makeup-tools (tool buttons),
+// #makeup-canvas (the face) and #makeup-side (the options for the chosen tool). The panel builders
+// (_buildBlushPanel etc.) all follow the pattern: heading, colour button, swatch grid, slider or
+// toggle, using the shared helpers _makeColorBtn, _makeSwatchGrid and _makeSlider at the end.
+//
+// Known limits / things to watch:
+//   - The 'Lips' tool asks Icons for an icon named 'lipstick', which does not exist in icons.js, so
+//     Icons.get() shows its fallback star icon instead.
+//   - Choosing 'Paint' calls Tools.setup(), which swaps the canvas for a blank clone (the face
+//     disappears until _drawFace() runs again); see the same note in salon.js. [mechanism observed
+//     in headless Chrome for the salon canvas]
+//   - Opacity 0 means "not applied": the face shows natural blush and natural lips in that case.
+// How to test: Game.goTo('makeup'); Makeup.lipOpacity = 1; Makeup._drawFace() in the console, then
+// check that the lips turn crimson.
 // ==============================================================================
 /* ===== MAKEUP STUDIO WORKSTATION ===== */
+// Singleton controller for the Makeup Studio.
 const Makeup = {
+  // Each cosmetic has a colour ("#rrggbb") and an opacity from 0 to 1 (set by its "Intensity" slider);
+  // 0 means the cosmetic is not applied. Liner, lashes and highlight are simple on/off flags. The defaults
+  // below are the first colours shown in each panel (pale pink blush, purple shadow, crimson lips, near-black liner).
   // Current makeup layer state parameters
   blushColor: '#FFB6C1',
   blushOpacity: 0,
@@ -17,10 +51,13 @@ const Makeup = {
   lipColor: '#DC143C',
   lipOpacity: 0,
   linerColor: '#1a1a2e',
+
+  // Liner, lashes and glow are on/off toggles rather than amounts.
   linerOn: false,
   lashesOn: false,
   highlightOn: false,
 
+  // Shades the player created in the Custom panel: "#rrggbb" strings, at most 12. Kept between visits (not reset in init()).
   // Custom makeup palette array
   customPalette: [],
 
@@ -32,9 +69,14 @@ const Makeup = {
     if (!c) return;
     const parent = c.parentElement;
     const rect = parent.getBoundingClientRect();
+
+    // Size the canvas to the space left of the side panels: 70 px tool column + 220 px side panel = 290 px; max 700 x 500.
+    // Setting the size also clears the canvas.
     c.width = Math.min(rect.width - 290, 700);
     c.height = Math.min(rect.height, 500);
 
+    // Every visit starts with a clean face (no makeup), so a new look can be made; colours are kept so the player
+    // sees their last-used shades again.
     // Reset makeup state
     this.blushOpacity = 0;
     this.shadowOpacity = 0;
@@ -43,16 +85,21 @@ const Makeup = {
     this.lashesOn = false;
     this.highlightOn = false;
 
+    // Build the tool buttons (which also builds the first side panel), then paint the face.
     this._buildTools();
     this._drawFace();
   },
 
   /* ===== TOOL PANEL ===== */
+  // Creates one button per tool in #makeup-tools. Ids: blush, shadow, lipstick, liner, lashes, highlight, custom,
+  // freehand and eraser (shown as "Reset"). The first starts selected.
   _buildTools() {
     const tools = document.getElementById('makeup-tools');
     if (!tools) return;
     tools.innerHTML = '';
 
+    // Each entry: id (used by _onToolChange), icon (a key in Icons.paths; 'lipstick' is missing, see the file overview) and
+    // the label under the icon.
     const toolList = [
       { id: 'blush', icon: 'face', label: 'Blush' },
       { id: 'shadow', icon: 'palette', label: 'Shadow' },
@@ -71,6 +118,8 @@ const Makeup = {
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
+
+      // Select this tool: move the highlight, click sound, and show its options.
       btn.onclick = () => {
         tools.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -80,9 +129,12 @@ const Makeup = {
       tools.appendChild(btn);
     });
 
+    // Start on the blush panel.
     this._onToolChange('blush');
   },
 
+  // Rebuilds the options panel (#makeup-side) for the chosen tool.
+  // @param {string} toolId - One of 'blush', 'shadow', 'lipstick', 'liner', 'lashes', 'highlight', 'custom', 'freehand', 'eraser'.
   _onToolChange(toolId) {
     const side = document.getElementById('makeup-side');
     if (!side) return;
@@ -97,6 +149,8 @@ const Makeup = {
       case 'highlight': this._buildHighlightPanel(side); break;
       case 'custom': this._buildCustomPanel(side); break;
       case 'freehand': this._buildFreehandPanel(side); break;
+
+      // "Reset": clears all makeup (opacities to 0 and flags off), repaints a bare face and tells the player. Colours stay.
       case 'eraser':
         this.blushOpacity = 0;
         this.shadowOpacity = 0;
@@ -118,12 +172,17 @@ const Makeup = {
   },
 
   /* ===== BLUSH PANEL ===== */
+  // Blush options: colour button, ten quick colours (pinks, corals, peach, tan, rose) and an intensity slider (0-100).
+  // The slider value is divided by 100 to get the 0-1 opacity the drawing code uses.
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildBlushPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Blush';
     side.appendChild(h4);
 
     // Color picker
+    // `colorBtn` is used inside its own callback (to update the button after a pick); this works because the callback only
+    // runs later, after the constant has been assigned.
     const colorBtn = this._makeColorBtn(this.blushColor, hex => {
       this.blushColor = hex;
       colorBtn.style.background = hex;
@@ -145,6 +204,9 @@ const Makeup = {
   },
 
   /* ===== EYESHADOW PANEL ===== */
+  // Eyeshadow options: colour button, 12 quick colours (purples, pink, gold, blue, green, red, orange, grey, tan, black)
+  // and an intensity slider.
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildShadowPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Eyeshadow';
@@ -169,6 +231,8 @@ const Makeup = {
   },
 
   /* ===== LIPSTICK PANEL ===== */
+  // Lipstick options: colour button, 12 quick colours (reds, pinks, nude) and an intensity slider.
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildLipPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Lipstick';
@@ -193,6 +257,9 @@ const Makeup = {
   },
 
   /* ===== LINER PANEL ===== */
+  // Eyeliner options: colour, seven dark quick colours and an on/off toggle button. The toggle re-labels itself
+  // ("Apply Liner" / "✓ Liner ON") and changes style (ghost vs primary button) to show its state.
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildLinerPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Eyeliner';
@@ -226,6 +293,8 @@ const Makeup = {
   },
 
   /* ===== LASHES PANEL ===== */
+  // Lashes: only an on/off toggle (the lash colour is fixed).
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildLashesPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Lashes';
@@ -251,6 +320,8 @@ const Makeup = {
   },
 
   /* ===== HIGHLIGHT/GLOW PANEL ===== */
+  // Highlight & glow: on/off toggle for a soft light on the brow, cheeks and nose bridge.
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildHighlightPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Highlight & Glow';
@@ -276,6 +347,10 @@ const Makeup = {
   },
 
   /* ===== CUSTOM MAKEUP PANEL ===== */
+  // Custom shades: the player picks a colour with the wheel and presses "+ Create" to add it to a palette (up to 12).
+  // Clicking a saved shade applies it to blush and eyeshadow together. This function rebuilds itself after adding a
+  // shade so the new swatch appears.
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildCustomPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Custom Makeup';
@@ -293,6 +368,8 @@ const Makeup = {
     const mixColor = document.createElement('div');
     mixColor.className = 'color-pick-btn';
     mixColor.style.background = '#FF69B4';
+
+    // The colour waiting to be added; a local variable (not saved), starting at hot pink each time the panel opens.
     let currentMix = '#FF69B4';
     mixColor.onclick = () => {
       ColorWheel.setFromHex(currentMix);
@@ -307,6 +384,7 @@ const Makeup = {
     addBtn.className = 'btn btn-accent';
     addBtn.textContent = '+ Create';
     addBtn.onclick = () => {
+      // Cap at 12 shades so the palette stays small; further presses do nothing.
       if (this.customPalette.length < 12) {
         this.customPalette.push(currentMix);
         Sound.play('sparkle');
@@ -332,6 +410,8 @@ const Makeup = {
         sw.style.cursor = 'pointer';
         sw.title = 'Click to use as blush/shadow/lip';
         sw.onclick = () => {
+          // Applies the shade to blush and shadow and makes sure each is at least visible (opacity at least 0.4 / 0.35), so the
+          // effect is seen immediately. (The code comment says "lowest opacity", but the code applies the shade to both layers.)
           // Apply to whichever has lowest opacity as a suggestion
           this.blushColor = c; this.blushOpacity = Math.max(this.blushOpacity, 0.4);
           this.shadowColor = c; this.shadowOpacity = Math.max(this.shadowOpacity, 0.35);
@@ -345,6 +425,9 @@ const Makeup = {
   },
 
   /* ===== FREEHAND PANEL ===== */
+  // Freehand paint: draw on the face with the shared brush. This panel has a colour button, 10 quick colours and a size
+  // slider (1-20); it ends by attaching Tools to the canvas, which blanks it (see the file overview).
+  // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildFreehandPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Freehand Paint';
@@ -367,12 +450,17 @@ const Makeup = {
       Tools.brushSize = v;
     }));
 
+    // Use the round brush with size 4 (a fine line) and attach the mouse handlers to the face canvas.
     Tools.currentTool = 'dye';
     Tools.brushSize = 4;
     Tools.setup('makeup-canvas');
   },
 
   /* ===== UI HELPERS ===== */
+  // Creates a round colour swatch button that opens the shared colour wheel when clicked.
+  // @param {string} color - Starting colour "#rrggbb".
+  // @param {Function} onChange - Called with the new "#rrggbb" after the player confirms in the wheel.
+  // @returns {HTMLElement} The button element (not yet added to the page).
   _makeColorBtn(color, onChange) {
     const btn = document.createElement('div');
     btn.className = 'color-pick-btn';
@@ -388,6 +476,10 @@ const Makeup = {
     return btn;
   },
 
+  // Creates a wrapped row of small colour swatches; clicking one plays a click sound and calls onClick with its colour.
+  // @param {string[]} colors - Colours "#rrggbb".
+  // @param {Function} onClick - Called with the chosen colour.
+  // @returns {HTMLElement} The container element.
   _makeSwatchGrid(colors, onClick) {
     const grid = document.createElement('div');
     grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin:6px 0;';
@@ -402,6 +494,13 @@ const Makeup = {
     return grid;
   },
 
+  // Creates a labelled range slider that calls onChange with the integer value on every move.
+  // @param {string} label - Heading above the slider.
+  // @param {number} value - Starting value.
+  // @param {number} min - Smallest value.
+  // @param {number} max - Largest value.
+  // @param {Function} onChange - Called with an integer on each input event.
+  // @returns {HTMLElement} The wrapper element.
   _makeSlider(label, value, min, max, onChange) {
     const wrap = document.createElement('div');
     wrap.style.marginTop = '10px';
@@ -420,6 +519,10 @@ const Makeup = {
   },
 
   /* ===== DRAW THE FACE ===== */
+  // Repaints the entire face from the current settings, back to front: neck, shoulders, back hair, face, ears,
+  // eyeshadow, eyes (with liner and lashes), eyebrows, blush, nose, lips, glow, front hair. Cosmetic layers are drawn
+  // at partial opacity (globalAlpha) so skin shows through, and globalAlpha is restored to 1 after each layer.
+  // Everything is positioned relative to the centre (cx, cy) with a face radius of 120 px.
   _drawFace() {
     const c = document.getElementById('makeup-canvas');
     if (!c) return;
@@ -428,13 +531,18 @@ const Makeup = {
     ctx.clearRect(0, 0, w, h);
 
     const cx = w/2, cy = h/2;
+
+    // Face radius in pixels; every feature offset below was tuned against this size.
     const r = 120; // face radius
+
+    // Use the saved character if there is one (otherwise the in-progress creator data) so the face matches the player's avatar.
     const charData = Game.state.character || Character.data;
     const skinColor = charData.skinTone || '#FDDBB4';
     const skinDark = Character._darken(skinColor, 12);
     const hairColor = charData.hairColor || '#3d2b1f';
     const eyeColor = charData.eyeColor || '#4a90d9';
 
+    // Neck: a 40x60 rectangle behind the lower face; shoulders: an ellipse of the outfit's top colour.
     // Neck
     ctx.fillStyle = skinColor;
     ctx.fillRect(cx - 20, cy + r*0.75, 40, 60);
@@ -445,6 +553,8 @@ const Makeup = {
     ctx.ellipse(cx, cy + r + 55, 90, 35, 0, 0, Math.PI*2);
     ctx.fill();
 
+    // Hair behind the face is a big ellipse a little larger than the head (1.15 x wide, 1.25 x tall), so a ring of hair
+    // shows around the face.
     // Hair back (behind face)
     ctx.fillStyle = hairColor;
     ctx.beginPath();
@@ -457,6 +567,7 @@ const Makeup = {
     ctx.arc(cx, cy, r, 0, Math.PI*2);
     ctx.fill();
 
+    // Ears reuse the skin fill still active from the face.
     // Ears
     ctx.beginPath();
     ctx.ellipse(cx - r*0.94, cy + 5, 12, 16, 0, 0, Math.PI*2);
@@ -465,6 +576,8 @@ const Makeup = {
     ctx.ellipse(cx + r*0.94, cy + 5, 12, 16, 0, 0, Math.PI*2);
     ctx.fill();
 
+    // Drawn before the eyes so the whites cover the middle. Two ellipses per side: a base in the shadow colour at
+    // opacity x 0.55, and a smaller darker one (20 lightness points darker) above it at opacity x 0.3 for depth.
     // ===== MAKEUP: EYESHADOW =====
     if (this.shadowOpacity > 0) {
       ctx.fillStyle = this.shadowColor;
@@ -492,6 +605,8 @@ const Makeup = {
       ctx.globalAlpha = 1;
     }
 
+    // Eyes: for each side (dir -1 = left, +1 = right) draw the white, optional liner and lashes, iris, pupil and two
+    // highlights. Eyes are 32 px either side of the centre.
     // ===== EYES =====
     const eyeY = cy + 2;
     const eyeSpacing = 32;
@@ -507,6 +622,8 @@ const Makeup = {
       ctx.lineWidth = 1;
       ctx.stroke();
 
+      // Eyeliner: an outline ellipse a pixel larger than the eye, plus a short "wing" line flicking up and outward
+      // (the dir factor mirrors it).
       // Liner
       if (this.linerOn) {
         ctx.strokeStyle = this.linerColor;
@@ -522,6 +639,8 @@ const Makeup = {
         ctx.stroke();
       }
 
+      // Lashes: five short strokes fanned across the top of each eye (angles from -0.3 pi to -0.9 pi, measured from the
+      // eye centre; negative y is up on the canvas), each starting at the eye's edge and extending about 7 px outward.
       // Lashes
       if (this.lashesOn) {
         ctx.strokeStyle = '#1a1a2e';
@@ -540,6 +659,7 @@ const Makeup = {
         }
       }
 
+      // Iris and pupil are nudged 1 px toward the outside (dir) so the gaze is offset slightly outward.
       // Iris
       ctx.fillStyle = eyeColor;
       ctx.beginPath();
@@ -563,6 +683,7 @@ const Makeup = {
       ctx.fill();
     });
 
+    // Eyebrows are a darkened hair colour, one curve per brow.
     // Eyebrows
     ctx.strokeStyle = Character._darken(hairColor, 10);
     ctx.lineWidth = 3.5;
@@ -576,6 +697,8 @@ const Makeup = {
     ctx.quadraticCurveTo(cx + 32, eyeY - 30, cx + 50, eyeY - 22);
     ctx.stroke();
 
+    // Blush: when applied, ellipses on the cheeks at opacity x 0.45; otherwise a faint natural blush (15% pink) so the face
+    // never looks flat.
     // ===== MAKEUP: BLUSH =====
     if (this.blushOpacity > 0) {
       ctx.globalAlpha = this.blushOpacity * 0.45;
@@ -594,6 +717,7 @@ const Makeup = {
       ctx.beginPath(); ctx.ellipse(cx + 42, cy + 28, 14, 8, 0, 0, Math.PI*2); ctx.fill();
     }
 
+    // Nose: a small darker-skin dot with a faint shine.
     // Nose
     ctx.fillStyle = skinDark;
     ctx.beginPath();
@@ -605,6 +729,9 @@ const Makeup = {
     ctx.arc(cx - 1, cy + 28, 2.5, 0, Math.PI*2);
     ctx.fill();
 
+    // Lips: when lipstick is applied (opacity > 0) draw a larger upper and lower lip in the lip colour at
+    // opacity x 0.7 + 0.3 (so even a low setting is clearly visible), plus a white shine; otherwise draw smaller
+    // natural-coloured lips (#e8a0a0). Each lip is a closed shape of quadratic curves.
     // ===== MAKEUP: LIPS =====
     if (this.lipOpacity > 0) {
       ctx.fillStyle = this.lipColor;
@@ -655,6 +782,8 @@ const Makeup = {
       ctx.fill();
     }
 
+    // Glow: three soft radial gradients in warm white (brow bone above the eyes, both cheeks, nose bridge), drawn at low
+    // opacity so they brighten without hiding features.
     // ===== MAKEUP: HIGHLIGHT/GLOW =====
     if (this.highlightOn) {
       ctx.globalAlpha = 0.35;
@@ -689,6 +818,8 @@ const Makeup = {
       ctx.globalAlpha = 1;
     }
 
+    // Front hair last, so it overlaps the forehead and eyebrows; a half ellipse plus a rectangle closing its lower edge,
+    // then a faint strand line. (The makeup station always shows the same simple hair shape, regardless of hair style.)
     // ===== HAIR FRONT (bangs, sits on top) =====
     ctx.fillStyle = hairColor;
     ctx.beginPath();
@@ -707,11 +838,15 @@ const Makeup = {
   },
 
   /* ===== FINISH ===== */
+  // "Done": stores a picture of the look in the closet (type 'makeup'), awards 45 XP, saves, and leaves the station (the
+  // level-up screen if a level was gained, otherwise the workshop).
   finish() {
     // Save makeup look to closet
     const c = document.getElementById('makeup-canvas');
     if (c) {
       const imageData = c.toDataURL('image/png');
+
+      // Build the item's name from the cosmetics used (for example "Blush + Lip Look"), or "Natural Look" if none.
       const lookName = [];
       if (this.blushOpacity > 0) lookName.push('Blush');
       if (this.shadowOpacity > 0) lookName.push('Shadow');
