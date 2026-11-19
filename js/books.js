@@ -30,7 +30,7 @@
 //     blanked the book until _drawBook() ran again; the canvas element is now kept and its pixels persist.
 //   - Every genre cell shows the same 'books' icon; the genreEmojis table is defined but not shown.
 //   - The title is typed by the player. It is drawn with fillText (safe), but it is also saved as the item's
-//     name, which Game._serveCustomer later inserts as HTML.
+//     name, which Game._serveCustomer later inserts as HTML (now escaped with U.escapeHtml).
 //   - `isRandom` is set but never read.
 // How to test: Game.goTo('books'); Books.bookGenre = 'Fantasy'; Books.bookTitle = 'Test'; Books._drawBook() in the console.
 // ==============================================================================

@@ -226,6 +226,25 @@ const U = {
   },
 
   /**
+   * Escapes text so it can be placed inside an innerHTML template literal as plain text.
+   * Added for Game._serveCustomer, which builds markup from player-typed book titles.
+   *
+   * @param {*} text - Any value; it is converted with String().
+   * @returns {string} The text with & < > " ' replaced by HTML entities.
+   */
+  escapeHtml(text) {
+    // The ampersand must be replaced first, otherwise the entities produced by the later replacements
+    // would themselves be escaped (&lt; would become &amp;lt;). Quotes are included so the result is also
+    // safe inside an attribute value.
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  /**
    * Clamps a scalar numeric value between lower and upper bounds.
    */
   clamp(v, min, max) {

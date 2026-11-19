@@ -712,10 +712,14 @@ const Game = {
     if (trait === 'Trendy') coinMult = 1.5;
     const coins = Math.round(U.rand(10, 30) * this.state.level * coinMult);
 
+    // Player-typed titles end up in item.name, so escape before it goes into the innerHTML template below.
+    // (The customer name and trait text come from constant lists and need no escaping.)
+    const safeName = U.escapeHtml(item.name);
+
     // Random flavour text for the reaction line and the quote.
     const reactions = ['loves', 'adores', 'is obsessed with', 'can\'t stop looking at', 'is thrilled by'];
     const quotes = [
-      `"This ${item.name} is absolutely perfect!"`,
+      `"This ${safeName} is absolutely perfect!"`,
       `"I've never seen anything so beautiful!"`,
       `"This is exactly what I was looking for!"`,
       `"You're so talented! I love this!"`,
@@ -730,16 +734,16 @@ const Game = {
 
     // Builds the detail pane as an HTML string. The item name and id come from the player's own saved items,
     // and the Sell button's inline onclick embeds the amount and the item id, so _completeSale() receives them
-    // as arguments. The name is NOT escaped: book titles are typed by the player (up to 30 characters) and are
-    // saved as the item name, so markup typed into a title would be interpreted here. Only the player's own browser
-    // is affected (there is no shared data), but it is a self-injection bug.
+    // as arguments. The name goes through U.escapeHtml (safeName): book titles are typed by the player (up to 30
+    // characters) and are saved as the item name, so unescaped markup typed into a title used to be interpreted here
+    // (a self-injection bug; only the player's own browser was affected).
     detailEl.innerHTML = `
       <div style="text-align:center">
         <div style="font-size:64px;margin-bottom:12px;">🤩</div>
         <h3 style="font-family:var(--font-display);margin-bottom:6px;">${name} ${U.pick(reactions)} it!</h3>
         <p style="color:var(--text-secondary);font-style:italic;">${U.pick(quotes)}</p>
         ${item.image ? `<img src="${item.image}" style="width:80px;height:80px;object-fit:contain;margin:10px auto;display:block;border-radius:8px;border:1px solid rgba(255,255,255,0.1);">` : ''}
-        <div style="font-size:11px;color:var(--text-muted);margin:4px 0;">Buying: ${item.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin:4px 0;">Buying: ${safeName}</div>
         ${traitBonus}
         <div style="font-size:32px;color:var(--accent-gold);font-family:var(--font-display);margin:12px 0;">+${coins} 🪙</div>
         <button class="btn btn-primary" onclick="Game._completeSale(${coins}, '${item.id}'); Sound.play('sell');">Sell Item</button>
