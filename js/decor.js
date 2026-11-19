@@ -26,8 +26,8 @@
 // next _drawDecorItem() (for example when the colour changes).
 //
 // Known limits / things to watch:
-//   - Tools.setup() swaps the canvas for a blank clone (see salon.js for the observation), so choosing
-//     a painting tool can blank the item until it is redrawn.
+//   - (Fixed) Tools.setup() used to swap the canvas for a blank clone, so choosing a painting tool blanked
+//     the item; it now re-binds listeners on the same canvas element and the pixels persist.
 //   - Icons.get() is called with 'blanket', 'pillow' and 'rug', which icons.js does not define, so the
 //     picker shows the fallback star icon.
 //   - Tassels and fringe use Math.random on every redraw, so they look slightly different each time.
@@ -56,7 +56,7 @@ const Decor = {
    * Initializes Home Decor canvas, resets textile attributes, and populates tools.
    */
   init() {
-    // Looked up by id on each call because Tools.setup() can replace the canvas element with a clone.
+    // Looked up by id on each call (cheap, and robust if the element is ever replaced).
     const c = document.getElementById('decor-canvas');
     if (!c) return;
     const parent = c.parentElement;

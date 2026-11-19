@@ -24,9 +24,8 @@
 // also erases any paint or stickers on the canvas.
 //
 // Known limits / things to watch:
-//   - Tools.setup() swaps the canvas for a blank clone (see salon.js for the observation), so after
-//     choosing a painting tool the device may disappear until _drawDevice() runs again. The device
-//     cannot be recoloured without losing the decoration.
+//   - (Fixed) Tools.setup() used to swap the canvas for a blank clone, so choosing a painting tool could make
+//     the device disappear; the canvas is now kept. The device still cannot be recoloured without losing the decoration.
 //   - Icons.get() is called with the ids 'phone', 'tablet' and 'airpods', none of which exist in icons.js,
 //     so the device picker shows the fallback star icon.
 //   - finish() awards 50 XP even when no device was chosen (nothing is added to the closet then).
@@ -48,7 +47,7 @@ const Tech = {
    * Initializes Tech Workshop canvas geometry, resets active gadget model, and loads tools.
    */
   init() {
-    // Looked up by id on each call because Tools.setup() can replace the canvas element with a clone.
+    // Looked up by id on each call (cheap, and robust if the element is ever replaced).
     const c = document.getElementById('tech-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -275,7 +274,7 @@ const Tech = {
       resetBtn.style.cssText = 'width:100%;margin-top:12px;';
       resetBtn.textContent = '🔄 Reset Device';
 
-      // Reset repaints the device from its settings, wiping all paint and stickers (it is also how the device comes back if Tools.setup() blanked the canvas).
+      // Reset repaints the device from its settings, wiping all paint and stickers (it also still serves as the way to start over from the plain device).
       resetBtn.onclick = () => { this._drawDevice(); Sound.play('whoosh'); };
       side.appendChild(resetBtn);
     }

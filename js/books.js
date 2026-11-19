@@ -26,8 +26,8 @@
 // this state and wipes any paint or stickers.
 //
 // Known limits / things to watch:
-//   - Tools.setup() swaps the canvas for a blank clone (see salon.js for the observation), so opening the
-//     Decorate or Sticker panel blanks the canvas until _drawBook() runs again (for example after typing a title).
+//   - (Fixed) Tools.setup() used to swap the canvas for a blank clone, so opening the Decorate or Sticker panel
+//     blanked the book until _drawBook() ran again; the canvas element is now kept and its pixels persist.
 //   - Every genre cell shows the same 'books' icon; the genreEmojis table is defined but not shown.
 //   - The title is typed by the player. It is drawn with fillText (safe), but it is also saved as the item's
 //     name, which Game._serveCustomer later inserts as HTML.
@@ -56,7 +56,7 @@ const Books = {
    * Initializes Book Shop workstation canvas, resets literature attributes, and loads tools.
    */
   init() {
-    // Looked up by id on each call because Tools.setup() can replace the canvas element with a clone.
+    // Looked up by id on each call (cheap, and robust if the element is ever replaced).
     const c = document.getElementById('books-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -253,7 +253,7 @@ const Books = {
 
   /* ===== DECORATE PANEL ===== */
   // Paint on the cover: colour button, 10 quick colours, a choice of brush, glitter or eraser, and a brush-size slider (2-20 px).
-  // It then attaches Tools to the canvas, which blanks it (see the file overview).
+  // It then attaches Tools to the canvas, which keeps the drawing (Tools.setup no longer blanks the canvas).
   // @param {HTMLElement} side - The #books-side element to fill.
   _buildDecoratePanel(side) {
     const h4 = document.createElement('h4');

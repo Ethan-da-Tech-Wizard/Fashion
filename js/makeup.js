@@ -30,9 +30,8 @@
 // Known limits / things to watch:
 //   - The 'Lips' tool asks Icons for an icon named 'lipstick', which does not exist in icons.js, so
 //     Icons.get() shows its fallback star icon instead.
-//   - Choosing 'Paint' calls Tools.setup(), which swaps the canvas for a blank clone (the face
-//     disappears until _drawFace() runs again); see the same note in salon.js. [mechanism observed
-//     in headless Chrome for the salon canvas]
+//   - (Fixed) Choosing 'Paint' calls Tools.setup(), which used to swap the canvas for a blank clone (the face
+//     disappeared until _drawFace() ran again); it now keeps the element, so the face stays.
 //   - Opacity 0 means "not applied": the face shows natural blush and natural lips in that case.
 // How to test: Game.goTo('makeup'); Makeup.lipOpacity = 1; Makeup._drawFace() in the console, then
 // check that the lips turn crimson.
@@ -65,7 +64,7 @@ const Makeup = {
    * Initializes Makeup Studio canvas dimensions, resets layers, and renders face portrait.
    */
   init() {
-    // Looked up by id on each call (not cached) because Tools.setup() can replace the canvas element with a clone.
+    // Looked up by id on each call (not cached) (cheap, and robust if the element is ever replaced).
     const c = document.getElementById('makeup-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -442,7 +441,7 @@ const Makeup = {
 
   /* ===== FREEHAND PANEL ===== */
   // Freehand paint: draw on the face with the shared brush. This panel has a colour button, 10 quick colours and a size
-  // slider (1-20); it ends by attaching Tools to the canvas, which blanks it (see the file overview).
+  // slider (1-20); it ends by attaching Tools to the canvas, which keeps the face (Tools.setup no longer blanks the canvas).
   // @param {HTMLElement} side - The #makeup-side element to fill.
   _buildFreehandPanel(side) {
     const h4 = document.createElement('h4');

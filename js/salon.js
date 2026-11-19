@@ -27,10 +27,9 @@
 //
 // Known limits / things to watch:
 //   - The head is a simplified, front-facing drawing (not the Character renderer).
-//   - Tools.setup() swaps the canvas for a blank clone, so choosing Highlights, Draw or
-//     a clip/accessory after the head is drawn clears the canvas. [observed: in headless Chrome the
-//     salon canvas had 42387 opaque pixels on the Style tool and 0 after switching to Highlights]
-//     The head only comes back when something calls _drawHead() again (choosing a style or dye).
+//   - (Fixed) Tools.setup() used to swap the canvas for a blank clone, so choosing Highlights, Draw or
+//     a clip/accessory cleared the head [observed: 42387 opaque pixels on the Style tool and 0 after
+//     switching to Highlights]. It now re-binds listeners on the same element, so the head stays.
 //   - "Undo" (the eraser button) is really "reset to the base drawing"; there is no undo history.
 //   - Salon.finish() saves whatever is on the canvas as the closet picture.
 // How to test: Game.goTo('salon') in the console, click the dye swatches and the style grid, then Done.
@@ -57,7 +56,7 @@ const Salon = {
    * Initializes Hair Salon canvas dimensions, synchronizes player hair model, and builds toolbars.
    */
   init() {
-    // The canvas is looked up by id on every call rather than cached, because Tools.setup() replaces the element with a clone and a cached reference would point at the old, detached canvas.
+    // The canvas is looked up by id on every call rather than cached (cheap; before the Tools.setup() fix the element was replaced by a clone and a cached reference would have pointed at a detached canvas).
     const c = document.getElementById('salon-canvas');
     if (!c) return;
 
@@ -157,7 +156,7 @@ const Salon = {
     } else if (toolId === 'accessories') {
       this._buildAccessoriesPanel(side);
 
-    // Freehand drawing uses the shared 'dye' brush on this canvas (Tools.setup clears the canvas, see the file overview).
+    // Freehand drawing uses the shared 'dye' brush on this canvas (Tools.setup keeps the canvas pixels, so the head drawn earlier stays visible).
     } else if (toolId === 'freehand') {
       this._buildFreehandPanel(side);
 
@@ -434,7 +433,7 @@ const Salon = {
         Tools.currentTool = 'sticker';
         Tools.brushSize = 8;
 
-        // Attach (or re-attach) the mouse handlers for the sticker tool; this clones the canvas (see the file overview).
+        // Attach (or re-attach) the mouse handlers for the sticker tool; the canvas element and its pixels are kept (see Tools.setup).
         Tools.setup('salon-canvas');
         grid.querySelectorAll('.item-cell').forEach(c => c.classList.remove('active'));
         cell.classList.add('active');

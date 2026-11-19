@@ -24,6 +24,7 @@
 // and STENCIL_SETS from utils.js. It never reads or writes Game state.
 //
 // Design decisions:
+//   - setup() re-binds listeners on the SAME canvas element (it used to swap in a pixel-less clone and blank the art).
 //   - Painting is destructive and raster-based: marks go straight into the canvas pixels with no
 //     undo and no layer list. That keeps drawing instant but means a station that wants to
 //     redraw its base shape (for example after changing fabric colour) also erases the marks.
@@ -67,7 +68,8 @@ const Tools = {
   _glitterParticles: [],
 
   /**
-   * Binds pointer event handlers to target canvas element after cloning to purge stale listeners.
+   * Binds pointer event handlers to the target canvas, first unbinding any handlers a previous call attached.
+   * The canvas element itself is never replaced, so its pixels (the drawing so far) survive every call.
    *
    * @param {string} canvasId - Target canvas HTML element id.
    */
@@ -77,24 +79,31 @@ const Tools = {
     const c = document.getElementById(canvasId);
     if (!c) return;
 
-    // Browsers have no "remove all listeners" call, so the canvas is replaced by a clone of itself (which
-    // copies the element and its attributes but none of the listeners attached by script). Without this,
-    // every tool change would add another set of handlers and each mouse event would paint several times.
-    // Side effects: the canvas element object changes, so old references to it become stale, and the
-    // cloned canvas keeps the bitmap contents only if cloneNode copies them (it does not copy the pixels
-    // of a canvas, so the previous drawing is cleared and the station must redraw its base shape).
-    // Purge previous listeners by DOM node cloning
-    const newC = c.cloneNode(true);
-    c.parentNode.replaceChild(newC, c);
+    // FIXED: this used to swap the canvas for c.cloneNode(true) to throw away old listeners, but cloneNode copies
+    // the element and its attributes, not the bitmap, so every tool change blanked the drawing (observed: 42387
+    // opaque pixels before and 0 after on the salon canvas). Instead the handlers are remembered on the element
+    // (c._toolHandlers) and removed explicitly, which gives the same "exactly one set of listeners" guarantee
+    // without touching the pixels. Side effect: the canvas element object is now stable, so cached references stay valid.
+    if (c._toolHandlers) {
+      for (const [type, fn] of Object.entries(c._toolHandlers)) c.removeEventListener(type, fn);
+    }
 
-    // Mouse events only. The canvas is passed along because the handlers need its size and position.
-    newC.addEventListener('mousedown', e => this._onDown(e, newC));
-    newC.addEventListener('mousemove', e => this._onMove(e, newC));
+    // The handlers are kept in one object so the next setup() call can remove precisely these functions
+    // (removeEventListener needs the same function reference that was added). Mouse events only; the canvas is
+    // passed along because the handlers need its size and position.
+    const handlers = {
+      mousedown: e => this._onDown(e, c),
+      mousemove: e => this._onMove(e, c),
 
-    // Releasing the button or leaving the canvas ends the stroke so painting does not continue "stuck"
-    // when the pointer comes back.
-    newC.addEventListener('mouseup', () => this._painting = false);
-    newC.addEventListener('mouseleave', () => this._painting = false);
+      // Releasing the button or leaving the canvas ends the stroke so painting does not continue "stuck"
+      // when the pointer comes back.
+      mouseup: () => { this._painting = false; },
+      mouseleave: () => { this._painting = false; },
+    };
+
+    // Attach and remember them (see above for why they are stored on the element).
+    for (const [type, fn] of Object.entries(handlers)) c.addEventListener(type, fn);
+    c._toolHandlers = handlers;
   },
 
   /**

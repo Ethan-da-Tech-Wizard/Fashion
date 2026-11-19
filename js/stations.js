@@ -33,12 +33,10 @@
 // stations push similar objects with their own `type` ('hair', 'makeup', 'tech', 'decor', 'books').
 //
 // Known limits / things to watch:
-//   - Tools.setup() replaces the canvas element with a clone, and a cloned canvas does NOT
-//     keep the original's pixels (per the DOM specification), so any drawing done before
-//     Tools.setup() is lost. _renderCutStep draws after calling setup (correct);
-//     _renderDecorateStep draws the fabric BEFORE calling setup, so the garment may not appear
-//     on the Decorate step. [observed: in headless Chrome the studio canvas had 18420 opaque
-//     pixels after the fabric step and 0 after entering the decorate step]
+//   - (Fixed) Tools.setup() used to replace the canvas element with a clone, and a cloned canvas does NOT
+//     keep the original's pixels (per the DOM specification), so any drawing done before Tools.setup()
+//     was lost [observed: 18420 opaque pixels after the fabric step and 0 after entering the decorate
+//     step]. setup() now keeps the element, so drawing before or after it both persist.
 //   - The saved image is whatever is on the canvas at save time, not a re-render of the
 //     garment, so the picture depends on the previous step's drawing.
 //   - Closet.filterTab() decides which tab is highlighted by comparing the button's text to the
@@ -86,7 +84,7 @@ const Stations = {
   // width/height also clears the canvas. This changes the canvas away from the 600x500 attributes
   // in index.html.
   _resizeCanvas() {
-    // Looked up by id on each call because Tools.setup() can replace the canvas element with a clone.
+    // Looked up by id on each call (cheap, and robust if the element is ever replaced).
     const c = document.getElementById('studio-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -574,7 +572,7 @@ const Stations = {
     // The cut tool draws a dashed white line along the mouse path (see Tools._drawCut).
     Tools.currentTool = 'cut';
 
-    // setup() clones the canvas, which clears it, so the fabric is redrawn after it (next lines).
+    // The fabric is redrawn after setup() (next lines): setup() no longer clears the canvas, but the cut guides must go on top of the fabric.
     Tools.setup('studio-canvas');
 
     // Draw the fabric with cut guides
@@ -599,7 +597,7 @@ const Stations = {
 
   /* ===== DECORATE STEP ===== */
   // Step 4: decorate with tools. The comment below says the fabric is saved as the base, but it is
-  // only redrawn (before Tools.setup() clears the canvas, see the note in the file overview).
+  // only redrawn (Tools.setup() no longer clears the canvas, so the order is harmless now).
   _renderDecorateStep() {
     // Save current fabric as base
     // This reference is not used afterwards; the call is harmless.
