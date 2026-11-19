@@ -28,9 +28,9 @@
 //   - Every sound is a short note or noise burst whose volume decays exponentially to near
 //     silence, which avoids the audible "click" that stopping an oscillator abruptly causes.
 //
-// Known limits: the on/off preference is written to Game.state.soundOn when settings
-// close, but Game.init() never reads it back into Sound.enabled, so sound is always on
-// after a page reload. Nothing here unlocks a suspended AudioContext (a context created
+// Persistence: the on/off preference is written to Game.state.soundOn when settings
+// close, and Game.init() now reads it back into Sound.enabled (and the checkbox) on load.
+// Known limits: nothing here unlocks a suspended AudioContext (a context created
 // inside a click handler normally starts running, so this works in practice).
 // How to test: open the page, click once anywhere, then run Sound.play('levelup') in the
 // console and listen for a four-note rising arpeggio.
@@ -42,8 +42,8 @@ const Sound = {
   // safe no-op before the first user gesture.
   ctx: null,
 
-  // Master mute switch. Flipped by toggle(); play() returns early when false. Not persisted
-  // across reloads (see "Known limits" above).
+  // Master mute switch. Flipped by toggle(); play() returns early when false. Persisted by
+  // Game.closeSettings() and restored by Game.init() (see "Persistence" above).
   enabled: true,
 
   /**

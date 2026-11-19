@@ -44,7 +44,8 @@
 //     handler is now stashed on the card (card._origOnclick) and put back on unlock.
 //   - checkLevelUp() raises the level by at most one per call even if the XP would pass two
 //     thresholds.
-//   - The saved soundOn flag is never applied to Sound.enabled at start-up (see sound.js).
+//   - (Fixed) The saved soundOn flag was never applied to Sound.enabled at start-up; init() now copies it
+//     into Sound.enabled and the settings checkbox (see sound.js).
 //   - startFreestyle() declares `bonusXP` but never awards it.
 // How to test: open the page, click New Game, then in the console run Game.addXP(300);
 // Game.checkLevelUp(); Game.goTo('workshop') and look at the badge (should show level 2 or 3).
@@ -115,6 +116,14 @@ const Game = {
       // Apply the saved weather and, if a character exists, give Character its saved appearance (it is
       // the same object, not a copy, so later edits in the creator change the saved state directly).
       Weather.set(this.state.weather);
+
+      // Apply the saved sound preference. closeSettings() has always written state.soundOn, but nothing read it back,
+      // so a player who muted the game got sound again after every reload. `!== false` treats a save made before this
+      // field existed (undefined) as "on", matching the default; the checkbox is synced because Sound.toggle() is the
+      // only other place that keeps it in step with Sound.enabled.
+      Sound.enabled = this.state.soundOn !== false;
+      const soundBox = document.getElementById('setting-sound');
+      if (soundBox) soundBox.checked = Sound.enabled;
       if (this.state.character) {
         Character.data = this.state.character;
       }
