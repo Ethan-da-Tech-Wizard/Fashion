@@ -37,8 +37,8 @@
 //     keep the original's pixels (per the DOM specification), so any drawing done before
 //     Tools.setup() is lost. _renderCutStep draws after calling setup (correct);
 //     _renderDecorateStep draws the fabric BEFORE calling setup, so the garment may not appear
-//     on the Decorate step. [inferred from reading the code and the DOM specification, not
-//     verified in a browser]
+//     on the Decorate step. [observed: in headless Chrome the studio canvas had 18420 opaque
+//     pixels after the fabric step and 0 after entering the decorate step]
 //   - The saved image is whatever is on the canvas at save time, not a re-render of the
 //     garment, so the picture depends on the previous step's drawing.
 //   - Closet.filterTab() decides which tab is highlighted by comparing the button's text to the

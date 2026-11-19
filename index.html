@@ -162,8 +162,9 @@
           <h3>Skin Tone</h3>
 
           <!--
-            Color swatch: clicking opens the shared #colorwheel-modal in 'skin' mode via
-            ColorWheel.open('skin'); the chosen color is written back to Character.data. Same
+            Color swatch: the inline onclick opens the shared #colorwheel-modal via
+            ColorWheel.open('skin'), but Character.init() later replaces it with its own handler (_setupColorCallbacks)
+            that also loads the current colour; the chosen color is written back to Character.data. Same
             pattern for 'hair' and 'eyes' below.
           -->
           <div id="skin-color-pick" class="color-pick-btn" onclick="ColorWheel.open('skin')"></div>
