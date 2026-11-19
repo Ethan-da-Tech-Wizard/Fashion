@@ -6,8 +6,33 @@
 //          Maintains scalable 24x24 path definitions for salon shears, cosmetic
 //          applicators, garment silhouettes, weather toggles, and navigation glyphs,
 //          providing runtime HTML generation with customizable viewBox dimensions.
+// FILE OVERVIEW
+// icons.js is the game's icon set: a dictionary of small inline SVG drawings plus two ways to use them.
+// Using inline SVG (instead of image files) keeps the game offline-friendly and lets icons take the
+// surrounding text colour through `stroke="currentColor"`, so a button's icon changes colour with its CSS.
+//
+// Two ways to get an icon:
+//   - Static markup: any element in index.html with a data-icon="name" attribute (and optionally
+//     data-icon-class="css-class") is filled by Icons.init() once, on DOMContentLoaded (the inline script at
+//     the bottom of index.html calls it).
+//   - Dynamic markup: station modules build buttons at run time and call Icons.get('name', size) to get the
+//     SVG string, which they put into innerHTML. Icons.init() does not run again, so this is the only way
+//     for dynamically built buttons.
+//
+// Who calls it: index.html (init), stations.js, salon.js, makeup.js, tech.js, decor.js and books.js (get).
+// It depends on nothing else.
+//
+// Design decisions: every icon is a 24x24 line drawing (stroke width 2, round caps and joins, no fill; see the
+// attributes written by get()), so they look consistent at any size. An unknown id returns the star icon rather than
+// nothing, so a missing icon is visible but does not break layout.
+//
+// Known limits: several names that modules request are not defined here and therefore show the fallback star:
+// 'lipstick' (makeup.js), 'phone', 'tablet', 'airpods' (tech.js), and 'blanket', 'pillow', 'rug' (decor.js).
+// How to test: in the console run document.body.insertAdjacentHTML('beforeend', Icons.get('gear', 48)) and
+// look for a gear at the bottom of the page.
 // ==============================================================================
 
+// Singleton icon library.
 const Icons = {
   /**
    * Generates an inline SVG markup string for a specified icon identifier.
@@ -18,12 +43,16 @@ const Icons = {
    * @returns {string} Well-formed SVG element markup.
    */
   get(id, size = 24, classes = '') {
+    // `||` keeps the lookup safe for ids that are missing; the fallback is the star path.
     const p = this.paths[id] || this.paths['star']; // Fallback to star icon on unknown identifier
     return `<svg class="fashion-icon ${classes}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   },
 
   // Scalable vector 24x24 path definitions organized by functional category
+  // Path table. Each value is the inner SVG markup (shapes and paths) drawn on a 24x24 canvas; get() wraps it in an <svg>. Keys are grouped into: interface
+  // glyphs, stations/categories, clothing silhouettes and crafting tools. Keys are looked up by the data-icon attributes in index.html and by the `icon` fields of each station's tool list.
   paths: {
+    // Interface glyphs: back arrow, check, gear (settings), dice (random/freestyle), mystery (question mark), coin, weather (sun), closet, shopping bag and edit.
     /* GUI & Navigation glyphs */
     'back': '<path d="M19 12H5M12 19l-7-7 7-7"/>',
     'check': '<path d="M20 6L9 17l-5-5"/>',
@@ -36,6 +65,7 @@ const Icons = {
     'shopping': '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
     'edit': '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
     
+    // Station icons: used on the workshop cards and closet tabs (dress, salon, makeup, tech, decor, books).
     /* Stations & Activity Categories */
     'dress': '<path d="M6 3h12l1 5-3 2c0 2-4 2-4 2s-4 0-4-2l-3-2 1-5z"/><path d="M5 10l-2 11h18l-2-11"/>',
     'salon': '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>',
@@ -44,12 +74,15 @@ const Icons = {
     'decor': '<path d="M3 13V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M2 13h20v6H2z"/><path d="M5 19v2M19 19v2"/>',
     'books': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
     
+    // Clothing silhouettes: used in the Fashion Studio's garment picker (the ids match GARMENT_TYPES; 'dress' is defined above with the stations and 'bow' below).
     /* Clothing Silhouettes */
     'pants': '<path d="M6 3h12l1 18-3-1-4-8-4 8-3 1z"/>',
     'shorts': '<path d="M6 3h12l1 10-4-1-3-4-3 4-4 1z"/>',
     'shoes': '<path d="M4 14v-2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/><path d="M2 18h20v2H2z"/><path d="M2 18s0-4 4-4"/><path d="M22 18s0-4-4-4"/>',
     'headband': '<path d="M4 12v-2a8 8 0 0 1 16 0v2"/><circle cx="12" cy="4" r="2"/>',
     
+    // Crafting tool glyphs used by the tool columns of the stations (scissors, palette, brush, star, bucket, sparkles, bow, pen, eraser, medal, bubbles, lashes, wand, fabric,
+    // square, spray, face). 'star' is also the fallback icon.
     /* Studio Crafting Tools */
     'scissors': '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>',
     'palette': '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.5 2 12 2z"/>',
@@ -73,6 +106,8 @@ const Icons = {
   /**
    * Scans DOM for elements with 'data-icon' attributes and injects the corresponding SVG markup.
    */
+  // Fills every [data-icon] element: the id comes from data-icon, an optional CSS class from data-icon-class, and the default size 24 is used. The element's existing children are replaced, so do not
+  // put other content inside a data-icon element. (Note that Weather.set() later overwrites the weather button's contents with an emoji.)
   init() {
     document.querySelectorAll('[data-icon]').forEach(el => {
       const id = el.getAttribute('data-icon');
