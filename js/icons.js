@@ -14,7 +14,7 @@
 // Two ways to get an icon:
 //   - Static markup: any element in index.html with a data-icon="name" attribute (and optionally
 //     data-icon-class="css-class") is meant to be filled by Icons.init() once, on DOMContentLoaded (the inline
-//     script at the bottom of index.html calls it only if `window.Icons` exists; see the next paragraph).
+//     script at the bottom of index.html calls it when `typeof Icons !== 'undefined'`; see the fixed-bug note below).
 //   - Dynamic markup: station modules build buttons at run time and call Icons.get('name', size) to get the
 //     SVG string, which they put into innerHTML. Icons.init() does not run again, so this is the only way
 //     for dynamically built buttons.
@@ -26,9 +26,10 @@
 // attributes written by get()), so they look consistent at any size. An unknown id returns the star icon rather than
 // nothing, so a missing icon is visible but does not break layout.
 //
-// Known bug [observed in headless Chrome]: `const Icons` does not create `window.Icons`, so the guard
-// `if(window.Icons) Icons.init()` in index.html is false and init() never runs; 0 of the 22 data-icon placeholders
-// are filled. Icons.get() works (it is called directly by the stations).
+// Fixed bug [was observed in headless Chrome]: `const Icons` does not create `window.Icons`, so the old guard
+// `if(window.Icons) Icons.init()` in index.html was always false and init() never ran; 0 of the 22 data-icon
+// placeholders were filled. The guard is now `typeof Icons !== 'undefined'` (regression test: tests/regression_chrome.test.js, "icons").
+// Icons.get() always worked (it is called directly by the stations).
 // Known limits: several names that modules request are not defined here and therefore show the fallback star:
 // 'lipstick' (makeup.js), 'phone', 'tablet', 'airpods' (tech.js), and 'blanket', 'pillow', 'rug' (decor.js).
 // How to test: in the console run document.body.insertAdjacentHTML('beforeend', Icons.get('gear', 48)) and

@@ -31,8 +31,8 @@
   at runtime by the owning module with createElement/innerHTML.
 
   Elements marked data-icon="name" are empty placeholders: Icons.init() (js/icons.js)
-  is meant to replace their contents with inline SVG after the page loads (but see the bug note
-  above the final inline script: that call currently never runs).
+  replaces their contents with inline SVG after the page loads (see the note above the final inline
+  script for why that call is guarded with `typeof Icons`, not `window.Icons`).
 
   Running it: open index.html in a browser, or serve the folder (for example
   `python3 -m http.server`). Progress is stored in localStorage under the key
@@ -641,18 +641,18 @@
   <script src="js/game.js"></script>
 
   <!--
-    Intended to hydrate every [data-icon] placeholder once the DOM is ready, and to survive a failed
-    load of icons.js through the `window.Icons` guard. BUG [observed in headless Chrome: typeof window.Icons
-    is 'undefined' while typeof Icons is 'object', and 0 of the 22 data-icon placeholders contained an SVG]:
-    `const Icons` in a classic script does not create a property on `window`, so the guard is always false and
-    Icons.init() never runs; the static icons in this file (menu buttons, workshop cards, header buttons, closet tabs)
-    stay empty. A fix would test `typeof Icons !== 'undefined'` instead. Dynamically created buttons (station tool
-    buttons) are not affected because they call Icons.get() themselves.
+    Hydrates every [data-icon] placeholder once the DOM is ready, and survives a failed load of icons.js.
+    FIXED: this used to test `window.Icons`, but `const Icons` in a classic script is a global lexical
+    binding, not a property of `window`, so the guard was always false and Icons.init() never ran (0 of the 22
+    placeholders got an SVG in headless Chrome). `typeof Icons` is safe for an undeclared name (it yields
+    'undefined' instead of throwing a ReferenceError), which keeps the "icons.js failed to load" protection.
+    Dynamically created buttons (station tool buttons) never depended on this because they call Icons.get() themselves.
   -->
   <script>
     // Initialize custom vector SVG icons once DOM parsing completes
     document.addEventListener('DOMContentLoaded', () => {
-      if(window.Icons) Icons.init();
+      // typeof (not window.Icons): top-level const is invisible on window; see the comment above.
+      if(typeof Icons !== 'undefined') Icons.init();
     });
   </script>
 </body>
