@@ -8,31 +8,112 @@
            Book Shop, Closet, and Customer Queue), interactive modal dialogs (HSV Color Wheel,
            Settings), and responsive HTML5 canvas elements for procedural rendering.
 ============================================================================== -->
+<!--
+  ARCHITECTURE OVERVIEW (read this first)
+  This is a single-page app: every "page" of the game is a <div class="screen"> that
+  lives in this one file. Exactly one screen has the class "active" at a time; the CSS
+  rule `.screen { display:none } .screen.active { display:flex }` hides the others.
+  Game.goTo('name') (js/game.js) removes "active" from all screens, adds it to the
+  element whose id is 'name' + '-screen', then calls that station's init(). So the
+  suffix before "-screen" in each id below is the name you pass to goTo().
+
+  Markup layout, top to bottom:
+    1. <head>: metadata, fonts, style.css.
+    2. Two decorative background layers (weather canvas, floating particles).
+    3. Eleven full-page screens (menu, character, workshop, six stations, closet,
+       customers) plus the level-up screen.
+    4. Two modal dialogs (color wheel, settings) that float above the screens.
+    5. Scripts, loaded in dependency order (see the comment above them).
+
+  Wiring convention: buttons use inline onclick="Module.method()" calling the global
+  singletons defined by js/*.js (Game, Character, Salon, ...). There is no build step
+  and no framework; empty containers such as #studio-tools or #face-shapes are filled
+  at runtime by the owning module with createElement/innerHTML.
+
+  Elements marked data-icon="name" are empty placeholders: Icons.init() (js/icons.js)
+  replaces their contents with inline SVG after the page loads.
+
+  Running it: open index.html in a browser, or serve the folder (for example
+  `python3 -m http.server`). Progress is stored in localStorage under the key
+  "fashion_state", so no server is needed. The only network request is the Google
+  Fonts stylesheet below; if it fails, the CSS font fallbacks are used.
+  @@ 14 
+  Declares UTF-8 so the emoji and typographic characters used in labels (arrows,
+  check marks, stars) are decoded correctly. It must appear in the first 1024 bytes
+  in practice, so it stays first in <head>.
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+
+  <!--
+    Makes the layout track the device width on phones/tablets instead of the default
+    ~980px virtual viewport; the @media (max-width: 900px) rules in style.css rely on it.
+  -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fashion — Design & Style Game</title>
+
+  <!--
+    Description used by search engines and link previews; it does not affect gameplay.
+    @@ 19 
+    Fonts: Fredoka is the rounded display face (titles, buttons) and Outfit is the body
+    face. `preconnect` opens the TLS connection to Google early so the font CSS arrives
+    sooner; display=swap shows fallback text immediately instead of invisible text while
+    the fonts download. This is the only external dependency; it is optional at runtime.
+  -->
   <meta name="description" content="Create characters, design clothes, style hair, do makeup, and build your fashion empire!">
   
   <!-- Web typography font preloading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!--
+    The game's single stylesheet. It is loaded after the fonts so its font-family
+    declarations can reference them, and it defines every .screen/.modal/.btn class
+    used below plus the CSS variables (the colour and font custom properties).
+  -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!--
+    Background layer 0: full-viewport canvas owned by Weather (js/weather.js). Weather
+    draws rain/snow/sun-ray particles into it every animation frame. CSS gives it
+    position:fixed and pointer-events:none so it never blocks clicks; it sits below the
+    screens (z-index 0 vs 1). It has no width/height attributes because weather.js
+    resizes it to window.innerWidth/innerHeight.
+  -->
   <!-- Full-screen atmospheric weather overlay canvas (rain drops, snow particles, solar flares) -->
   <canvas id="weather-canvas"></canvas>
 
+  <!--
+    Background layer 0: Game._initParticles() (js/game.js) appends 35 floating emoji
+    <div class="particle"> elements here at startup; CSS keyframes animate them upward.
+    Purely decorative and pointer-events:none, so it is safe to leave empty in tests.
+  -->
   <!-- Container for celebratory particle emitters (confetti, sparkles, level-up stars) -->
   <div id="particles-container"></div>
 
+  <!--
+    SCREEN 1 - MAIN MENU. This is the only screen that starts with class "active", so
+    it is what the player sees on load. Game.init() disables the Continue button
+    (opacity 0.4 + pointer-events none) when there is no saved game.
+  -->
   <!-- ===== 1. MAIN MENU SCREEN ===== -->
   <div id="menu-screen" class="screen active">
     <div class="menu-container">
       <h1 class="game-title shimmer-text">Fashion</h1>
       <p class="game-subtitle">Design · Style · Create</p>
+
+      <!--
+        Menu button group. All three call methods on the Game object:
+          New Game  -> Game.newGame() wipes state, then opens the character creator.
+          Continue  -> Game.continueGame() reloads the saved character and opens the workshop.
+          Settings  -> Game.showSettings() opens the #settings-modal below.
+        The ids (btn-new-game, btn-continue, btn-settings) are looked up by Game.init(), not
+        by the CSS. The data-icon spans receive their SVG from Icons.init().
+      -->
       <div class="menu-buttons">
         <button id="btn-new-game" class="btn btn-primary btn-lg" onclick="Game.newGame()"><span data-icon="scissors" data-icon-class="btn-icon-inline"></span> New Game</button>
         <button id="btn-continue" class="btn btn-secondary btn-lg" onclick="Game.continueGame()"><span data-icon="dress" data-icon-class="btn-icon-inline"></span> Continue</button>
@@ -41,14 +122,36 @@
     </div>
   </div>
 
+  <!--
+    SCREEN 2 - CHARACTER CREATOR. Entered from New Game or the workshop's "Edit
+    Character" button. Character.init() (js/character.js) runs on entry and fills the
+    option rows with buttons. Layout: header bar on top, then a two-column
+    .creator-layout (options panel on the left, live avatar canvas on the right).
+  -->
   <!-- ===== 2. CHARACTER CREATOR SCREEN ===== -->
   <div id="character-screen" class="screen">
+
+    <!--
+      Shared header bar used by every screen except the menu: Back button, title, and a
+      primary action. Here "Done" calls Game.finishCharacter(), which saves the avatar into
+      Game.state.character and moves to the workshop. The class .screen-header is sticky
+      with z-index 5 so scrolling panels slide under it.
+    -->
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('menu')">← Back</button>
       <h2>Create Your Character</h2>
       <button class="btn btn-primary" onclick="Game.finishCharacter()">Done ✓</button>
     </div>
     <div class="creator-layout">
+
+      <!--
+        Options sidebar. Each .panel-section holds a heading plus either an option row (a
+        list of choice buttons generated by Character.js into the element with the given id)
+        or a color swatch. IDs used by script: face-shapes, hair-styles, eye-shapes
+        (containers that Character.init() fills) and skin-color-pick, hair-color-pick,
+        eye-color-pick (swatch buttons whose background Character updates to show the
+        current color).
+      -->
       <!-- Options sidebar for facial attributes, hair styles, skin tones, and eyes -->
       <div class="creator-panel" id="creator-options">
         <div class="panel-section">
@@ -57,10 +160,21 @@
         </div>
         <div class="panel-section">
           <h3>Skin Tone</h3>
+
+          <!--
+            Color swatch: clicking opens the shared #colorwheel-modal in 'skin' mode via
+            ColorWheel.open('skin'); the chosen color is written back to Character.data. Same
+            pattern for 'hair' and 'eyes' below.
+          -->
           <div id="skin-color-pick" class="color-pick-btn" onclick="ColorWheel.open('skin')"></div>
         </div>
         <div class="panel-section">
           <h3>Hair Style</h3>
+
+          <!--
+            .scrollable lets the long hair-style list scroll inside the panel instead of
+            stretching the page.
+          -->
           <div class="option-row scrollable" id="hair-styles"></div>
         </div>
         <div class="panel-section">
@@ -76,24 +190,63 @@
           <div id="eye-color-pick" class="color-pick-btn" onclick="ColorWheel.open('eyes')"></div>
         </div>
         <div class="panel-section">
+
+          <!--
+            Randomisation controls. Random picks every attribute at random; Mystery does the
+            same randomisation (Character.mystery) but first flashes the canvas white for 300 ms
+            as a "reveal" effect. Both only mutate Character.data and redraw the canvas; nothing is saved until Done.
+          -->
           <button class="btn btn-accent btn-sm" onclick="Character.randomize()"><span data-icon="dice"></span> Random</button>
           <button class="btn btn-accent btn-sm" onclick="Character.mystery()"><span data-icon="mystery"></span> Mystery</button>
         </div>
       </div>
+
+      <!--
+        Avatar preview. Character.drawCharacter() paints the vector character here. The
+        fixed 400x600 backing store (2:3 portrait) is the coordinate space that all of the
+        character drawing code assumes; CSS may scale it visually without changing the
+        drawing coordinates.
+      -->
       <!-- 2D Canvas rendering procedural vector avatar -->
       <canvas id="character-canvas" width="400" height="600"></canvas>
     </div>
   </div>
 
+  <!--
+    SCREEN 3 - WORKSHOP HUB. The home base: shows level/XP/coins, the six station cards,
+    closet and customer shortcuts, and a small avatar preview. On entry Game.goTo
+    ('workshop') calls Game._updateHUD() (fills level-badge, xp-text, workshop-coins),
+    Game._renderWorkshopChar() (draws the avatar) and Game._updateCardLocks() (greys out
+    stations the player has not unlocked).
+  -->
   <!-- ===== 3. WORKSHOP HUB SCREEN ===== -->
   <div id="workshop-screen" class="screen">
     <div class="screen-header">
+
+      <!--
+        Left side of the header: Back to menu plus progression read-outs. #level-badge and
+        #xp-text are rewritten by Game._updateHUD(), e.g. "Lv 2" and "120 / 300 XP".
+      -->
       <div class="header-left">
         <button class="btn btn-back" onclick="Game.goTo('menu')">← Menu</button>
         <span class="level-badge" id="level-badge">Lv 1</span>
         <span class="xp-text" id="xp-text">0 XP</span>
       </div>
       <h2>Workshop</h2>
+
+      <!--
+        Right side of the header: coin balance (#workshop-coins, updated by
+        Game._updateHUD) and three icon buttons. Weather.cycle() steps sunny -> rainy ->
+        snowy; the other two navigate to the closet and customers screens. The buttons have
+        no text, so their title attributes are the accessible names (tooltip + screen reader).
+        @@ 104 
+        Station selector grid. Each card is a <button> (keyboard focusable) whose id is
+        "card-" + station. Game._updateCardLocks() adds the CSS class "locked" to cards
+        whose required level has not been reached (salon 3, makeup 4, tech 5, decor 6,
+        books 7; the Fashion Studio is always open). The class applies opacity 0.4 and
+        pointer-events:none in style.css. The onclick calls Game.goTo(station), which
+        initialises that station.
+      -->
       <div class="header-right">
         <span class="coins-badge" id="workshop-coins"><span data-icon="coin" data-icon-class="ui-icon"></span> 0</span>
         <button class="btn btn-icon" onclick="Weather.cycle()" title="Change Weather" id="weather-btn" data-icon="weather"></button>
@@ -128,6 +281,12 @@
         <span class="card-desc">Create & sell books</span>
       </button>
     </div>
+
+    <!--
+      Bottom action row. Freestyle Challenge calls Game.startFreestyle(): it picks a random
+      unlocked station and a random theme, shows a modal toast, then navigates there.
+      Edit Character reopens the creator without resetting the game.
+    -->
     <div class="workshop-bottom">
       <button class="btn btn-accent freestyle-btn" onclick="Game.startFreestyle()">
         <span data-icon="dice"></span> Freestyle Challenge
@@ -136,17 +295,35 @@
         <span data-icon="edit"></span> Edit Character
       </button>
     </div>
+
+    <!--
+      Small avatar preview drawn by Game._renderWorkshopChar() using the saved character.
+      200x300 keeps the same 2:3 ratio as the 400x600 creator canvas so the drawing is just
+      scaled by the 0.55 factor passed from game.js.
+    -->
     <!-- Live character avatar preview in workshop -->
     <div class="workshop-character-preview">
       <canvas id="workshop-char-canvas" width="200" height="300"></canvas>
     </div>
   </div>
 
+  <!--
+    SCREEN 4 - FASHION STUDIO. A five-step wizard (type, fabric, cut, decorate, preview)
+    driven by Stations (js/stations.js). Stations.init(0) runs on entry and starts at the
+    first step. Unlike the other five stations it has Prev/Next buttons in a footer and
+    no "Done" button; the last step saves the item into the closet.
+  -->
   <!-- ===== 4. FASHION STUDIO SCREEN ===== -->
   <div id="studio-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
       <h2 id="studio-title">Fashion Studio</h2>
+
+      <!--
+        Step indicator. Stations.showStep() loops over `#studio-steps .step` and toggles the
+        "active" class by index, so the order of the data-step spans must match Stations'
+        step list. data-step is informational; the code uses the position, not the value.
+      -->
       <!-- Multistep wizard navigation bar -->
       <div class="studio-steps" id="studio-steps">
         <span class="step active" data-step="type">Type</span>
@@ -156,17 +333,37 @@
         <span class="step" data-step="preview">Preview</span>
       </div>
     </div>
+
+    <!--
+      Three-column workbench layout shared by all six stations (CSS class .studio-layout).
+      Left: #studio-tools is filled with option buttons for the current step. Middle: the
+      canvas where the item is drawn live. Right: #studio-side shows extra controls and
+      summary info. All three children are emptied and rebuilt by the module on every step.
+      The canvas is 600x500 so every station draws in the same coordinate space.
+    -->
     <div class="studio-layout">
       <div class="tool-panel" id="studio-tools"></div>
       <canvas id="studio-canvas" width="600" height="500"></canvas>
       <div class="side-panel" id="studio-side"></div>
     </div>
+
+    <!--
+      Wizard navigation. Prev/Next call Stations.prevStep()/nextStep(). The ids are used
+      so Stations.showStep() can hide Prev on the first step (visibility:hidden, so the
+      layout does not shift) and relabel Next as "Save to Closet" on the last.
+    -->
     <div class="studio-footer">
       <button class="btn btn-secondary" id="studio-prev" onclick="Stations.prevStep()">← Prev</button>
       <button class="btn btn-primary" id="studio-next" onclick="Stations.nextStep()">Next →</button>
     </div>
   </div>
 
+  <!--
+    SCREEN 5 - HAIR SALON. Owned by Salon (js/salon.js); Salon.init() runs on entry. Same
+    three-column workbench as the studio. Done calls Salon.finish(), which saves the
+    styled hair into the closet, awards XP, and leaves for the workshop or level-up
+    screen. Locked until player level 3.
+  -->
   <!-- ===== 5. HAIR SALON SCREEN ===== -->
   <div id="salon-screen" class="screen">
     <div class="screen-header">
@@ -181,6 +378,11 @@
     </div>
   </div>
 
+  <!--
+    SCREEN 6 - MAKEUP STUDIO. Owned by Makeup (js/makeup.js). Same structure as the
+    salon; ids makeup-tools / makeup-canvas / makeup-side are looked up by Makeup.init().
+    Locked until player level 4.
+  -->
   <!-- ===== 6. MAKEUP STUDIO SCREEN ===== -->
   <div id="makeup-screen" class="screen">
     <div class="screen-header">
@@ -195,6 +397,10 @@
     </div>
   </div>
 
+  <!--
+    SCREEN 7 - TECH WORKSHOP. Owned by Tech (js/tech.js): designing phone, tablet and
+    earbud cases. Same structure; locked until level 5.
+  -->
   <!-- ===== 7. TECH WORKSHOP SCREEN ===== -->
   <div id="tech-screen" class="screen">
     <div class="screen-header">
@@ -209,6 +415,10 @@
     </div>
   </div>
 
+  <!--
+    SCREEN 8 - HOME DECOR. Owned by Decor (js/decor.js): blankets, pillows and rugs.
+    Same structure; locked until level 6.
+  -->
   <!-- ===== 8. HOME DECOR SCREEN ===== -->
   <div id="decor-screen" class="screen">
     <div class="screen-header">
@@ -223,6 +433,10 @@
     </div>
   </div>
 
+  <!--
+    SCREEN 9 - BOOK SHOP. Owned by Books (js/books.js): designing and writing books to
+    sell. Same structure; locked until level 7.
+  -->
   <!-- ===== 9. BOOK SHOP SCREEN ===== -->
   <div id="books-screen" class="screen">
     <div class="screen-header">
@@ -237,11 +451,22 @@
     </div>
   </div>
 
+  <!--
+    SCREEN 10 - CLOSET. Lists every item the player has finished (Game.state.closet).
+    Closet.render() (js/stations.js) fills #closet-grid with one card per item and is
+    called by Game.goTo('closet').
+  -->
   <!-- ===== 10. CLOSET SCREEN ===== -->
   <div id="closet-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
       <h2>My Closet</h2>
+
+      <!--
+        Category filter tabs. Closet.filterTab(type) stores the filter and re-renders; the
+        filter value must equal an item's `type` field ('clothes', 'hair', ...). The tabs
+        use icons instead of text so their meaning comes from the data-icon art.
+      -->
       <div class="closet-tabs">
         <button class="tab active" onclick="Closet.filterTab('all')">All</button>
         <button class="tab" onclick="Closet.filterTab('clothes')" data-icon="dress"></button>
@@ -252,16 +477,35 @@
         <button class="tab" onclick="Closet.filterTab('books')" data-icon="books"></button>
       </div>
     </div>
+
+    <!--
+      Item grid container, rebuilt from scratch by Closet.render().
+    -->
     <div class="closet-grid" id="closet-grid"></div>
   </div>
 
+  <!--
+    SCREEN 11 - CUSTOMERS. Players sell closet items here for coins and XP.
+    Game._renderCustomers() builds the queue; clicking a card runs Game._serveCustomer().
+  -->
   <!-- ===== 11. CUSTOMERS SCREEN ===== -->
   <div id="customers-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
       <h2>Customers</h2>
+
+      <!--
+        Coin total; Game._updateHUD() and _renderCustomers() both rewrite its text.
+      -->
       <span class="coins-display" id="coins-display"><span data-icon="coin" data-icon-class="ui-icon"></span> 0</span>
     </div>
+
+    <!--
+      Two-pane layout: a queue of customer cards (#customer-queue, generated on each
+      visit, up to 8, scaling with closet size) and a detail pane (#customer-detail) that
+      shows the selected customer's reaction and the Sell button. The placeholder text
+      is replaced as soon as the player picks a customer.
+    -->
     <div class="customers-layout">
       <div class="customer-queue" id="customer-queue"></div>
       <div class="customer-detail" id="customer-detail">
@@ -270,6 +514,13 @@
     </div>
   </div>
 
+  <!--
+    SCREEN 12 - LEVEL UP. Not reachable from the UI directly: Game.checkLevelUp() returns
+    true after a finished item pushes XP past the threshold, and the station then calls
+    Game.goTo('levelup'). Game._renderLevelUp() writes the level and a list of unlocked
+    features into the two ids below, plays a fanfare and fires confetti on the
+    #confetti-canvas that Game.init() creates.
+  -->
   <!-- ===== 12. LEVEL UP OVERLAY SCREEN ===== -->
   <div id="levelup-screen" class="screen">
     <div class="levelup-container">
@@ -281,6 +532,12 @@
     </div>
   </div>
 
+  <!--
+    MODAL 1 - COLOR WHEEL. A modal is a fixed full-screen overlay (.modal, z-index 100)
+    shown by adding the class "active". It is opened with ColorWheel.open(target) and
+    closed by ColorWheel.close() or ColorWheel.confirm(). One shared dialog serves the
+    character creator and stations; ColorWheel remembers who asked.
+  -->
   <!-- ===== 13. COLOR WHEEL MODAL ===== -->
   <div id="colorwheel-modal" class="modal">
     <div class="modal-content colorwheel-content">
@@ -288,6 +545,16 @@
         <h3 id="cw-title">Pick a Color</h3>
         <button class="btn btn-icon" onclick="ColorWheel.close()">✕</button>
       </div>
+
+      <!--
+        Picker body. #cw-canvas (280x280, square so the circular hue/saturation disc is
+        undistorted) is painted by ColorWheel. The controls on the right are all read by
+        ColorWheel.update(): brightness and saturation sliders (HSL lightness and saturation, 0-100 percent;
+        defaults 50 and 100 give a vivid mid-tone), a preview chip, and a hex text field kept in sync in both
+        directions (oninput calls fromHex() so typing a hex code moves the sliders).
+        #cw-recent and #cw-presets are filled with swatch buttons from the recent-colour
+        history and the preset palette. "Select Color" commits the value via confirm().
+      -->
       <div class="cw-layout">
         <!-- Circular 2D color picker canvas -->
         <canvas id="cw-canvas" width="280" height="280"></canvas>
@@ -306,6 +573,11 @@
     </div>
   </div>
 
+  <!--
+    MODAL 2 - SETTINGS. Opened from the menu via Game.showSettings(); closing it with
+    Game.closeSettings() also copies the weather and sound choices into Game.state and
+    saves them, which is how the settings persist.
+  -->
   <!-- ===== 14. SETTINGS MODAL ===== -->
   <div id="settings-modal" class="modal">
     <div class="modal-content">
@@ -313,6 +585,14 @@
         <h3>Settings</h3>
         <button class="btn btn-icon" onclick="Game.closeSettings()">✕</button>
       </div>
+
+      <!--
+        Each .setting-row is one control. Weather uses a <select> whose values must match
+        the keys that Weather.set() understands (sunny, rainy, snowy). Sound uses a styled
+        checkbox: Sound.toggle() flips Sound.enabled. Reset Game asks for confirmation, then
+        removes the saved state (localStorage key "fashion_state") and reloads the page, so it is
+        destructive and cannot be undone.
+      -->
       <div class="settings-list">
         <div class="setting-row">
           <span>Weather</span>
@@ -333,6 +613,15 @@
     </div>
   </div>
 
+  <!--
+    Scripts are classic (non-module) scripts, so each one just defines a global const
+    and later files can use earlier ones. Order matters: utils.js (the U helpers and
+    data tables) and icons.js come first because everything uses them; then sound and
+    the color wheel, weather, the character renderer, the shared drawing tools, then the
+    stations that use them, and game.js last because Game.init() (run on
+    DOMContentLoaded) calls into all of the others. They are at the end of <body> so the
+    DOM above already exists when they run.
+  -->
   <!-- Modular script architecture loaded in strict topological dependency order -->
   <script src="js/utils.js"></script>
   <script src="js/icons.js"></script>
@@ -348,6 +637,13 @@
   <script src="js/decor.js"></script>
   <script src="js/books.js"></script>
   <script src="js/game.js"></script>
+
+  <!--
+    Hydrates every [data-icon] placeholder once the DOM is ready. The `window.Icons`
+    guard makes the page survive if icons.js failed to load. Note that dynamically
+    created buttons (e.g. station tool buttons) call Icons.get() themselves, because
+    this runs only once.
+  -->
   <script>
     // Initialize custom vector SVG icons once DOM parsing completes
     document.addEventListener('DOMContentLoaded', () => {
