@@ -6,11 +6,42 @@
 //          Renders procedural vector device models (Smartphones, Tablets, AirPods)
 //          with customizable casing chassis, screen wallpapers, metallic antenna bands,
 //          camera bumps, spray-paint layers, and sticker embellishments.
+// FILE OVERVIEW
+// tech.js is the Tech Workshop station (#tech-screen in index.html): the player picks a gadget
+// (phone, tablet or earbud case), chooses its body and screen colours, decorates it with spray
+// paint, glitter, paint and stickers, and presses Done to save a picture of it in the closet.
+//
+// Who calls it: Game.goTo('tech') calls Tech.init(); the screen's Done button calls Tech.finish().
+// It uses Tools (painting on #tech-canvas), ColorWheel, Icons, Sound, DEVICE_TYPES (utils.js) and
+// Game (addToCloset, addXP, save, checkLevelUp, goTo).
+//
+// Layout: the usual three columns: #tech-tools (tool buttons), #tech-canvas (the device) and
+// #tech-side (options). _buildTools makes the buttons; _buildSidePanel(toolId) fills the options and
+// also attaches Tools to the canvas for the painting tools.
+//
+// State on Tech: deviceType (id from DEVICE_TYPES or null), deviceColor (body) and screenColor.
+// Everything else lives in the canvas pixels. _drawDevice() repaints the device from this state, which
+// also erases any paint or stickers on the canvas.
+//
+// Known limits / things to watch:
+//   - Tools.setup() swaps the canvas for a blank clone (see salon.js for the observation), so after
+//     choosing a painting tool the device may disappear until _drawDevice() runs again. The device
+//     cannot be recoloured without losing the decoration.
+//   - Icons.get() is called with the ids 'phone', 'tablet' and 'airpods', none of which exist in icons.js,
+//     so the device picker shows the fallback star icon.
+//   - finish() awards 50 XP even when no device was chosen (nothing is added to the closet then).
+// How to test: Game.goTo('tech'); Tech.deviceType = 'phone'; Tech._drawDevice() in the console.
 // ==============================================================================
 /* ===== TECH WORKSHOP WORKSTATION ===== */
+// Singleton controller for the Tech Workshop.
 const Tech = {
+  // Chosen gadget id from DEVICE_TYPES ('phone', 'tablet', 'airpods') or null until one is picked.
   deviceType: null,
+
+  // Body colour; the default is near-black navy.
   deviceColor: '#1a1a2e',
+
+  // Screen colour; the default is dark slate.
   screenColor: '#111827',
 
   /**
@@ -21,20 +52,26 @@ const Tech = {
     if (!c) return;
     const parent = c.parentElement;
     const rect = parent.getBoundingClientRect();
+
+    // Fit the canvas to the space beside the side panels: the tool column (70 px) plus the options panel (220 px) is 290 px;
+    // at most 700 x 500. Setting the size clears the canvas.
     c.width = Math.min(rect.width - 290, 700);
     c.height = Math.min(rect.height, 500);
 
+    // Each visit starts with no device selected so the player picks one; the colours are kept.
     this.deviceType = null;
     this._buildTools();
     this._buildSidePanel('pick');
   },
 
   /* ===== TOOLS ===== */
+  // Creates the tool buttons in #tech-tools: Device (pick), Color, Spray, Sticker, Glitter, Paint (dye) and Eraser.
   _buildTools() {
     const tools = document.getElementById('tech-tools');
     if (!tools) return;
     tools.innerHTML = '';
 
+    // Each entry: id (passed to _buildSidePanel), icon (a key in Icons.paths) and label.
     const toolList = [
       { id: 'pick', icon: 'tech', label: 'Device' },
       { id: 'color', icon: 'palette', label: 'Color' },
@@ -51,6 +88,8 @@ const Tech = {
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
+
+      // Select the tool: move the highlight, click sound, then rebuild the side panel (which also configures Tools).
       btn.onclick = () => {
         tools.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -61,11 +100,15 @@ const Tech = {
     });
   },
 
+  // Fills #tech-side for the selected tool and, for painting tools, configures the shared Tools object and attaches it to
+  // the canvas.
+  // @param {string} toolId - 'pick', 'color', 'spray', 'sticker', 'glitter', 'dye' or 'eraser'.
   _buildSidePanel(toolId) {
     const side = document.getElementById('tech-side');
     if (!side) return;
     side.innerHTML = '';
 
+    // Device picker: one cell per entry in DEVICE_TYPES; choosing a cell draws that device straight away.
     if (toolId === 'pick') {
       const h4 = document.createElement('h4');
       h4.textContent = 'Choose Device';
@@ -76,6 +119,8 @@ const Tech = {
       DEVICE_TYPES.forEach(d => {
         const cell = document.createElement('div');
         cell.className = 'item-cell' + (this.deviceType === d.id ? ' active' : '');
+
+        // Icon plus name (the icon id equals the device id, which icons.js does not define, so the fallback star shows).
         cell.innerHTML = `<div style="text-align:center"><div>${Icons.get(d.id, 26)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${d.name}</div></div>`;
         cell.onclick = () => {
           this.deviceType = d.id;
@@ -88,9 +133,13 @@ const Tech = {
       });
       side.appendChild(grid);
 
+      // Until a device is chosen show a hint on the empty canvas.
       if (!this.deviceType) {
         this._drawPlaceholder('Pick a device →');
       }
+
+    // Colour panel: a body colour button (opens the wheel) with 12 quick colours, then eight dark screen colours.
+    // Both redraw the device immediately.
     } else if (toolId === 'color') {
       const h4 = document.createElement('h4');
       h4.textContent = 'Device Color';
@@ -121,6 +170,8 @@ const Tech = {
       });
       side.appendChild(qg);
 
+      // Screen colours are all dark (navy, slate, deep purple, dark green, brown, plum, dark blue) so the screen looks like
+      // an off display; they are fixed presets rather than a wheel.
       // Screen color
       const h4b = document.createElement('h4');
       h4b.textContent = 'Screen Color';
@@ -138,10 +189,15 @@ const Tech = {
         sg.appendChild(sw);
       });
       side.appendChild(sg);
+
+    // Spray: the shared tool in spray mode (a scatter of small dots); the panel offers colour and size.
     } else if (toolId === 'spray') {
       this._buildPaintPanel(side, 'Spray Paint');
       Tools.currentTool = 'spray';
       Tools.setup('tech-canvas');
+
+    // Stickers: tech-themed emoji (devices, music, shapes, hearts) in the first ten, then general decorations. Choosing
+    // one sets Tools.currentSticker; the player clicks on the canvas to place it (size 3 x 8 = 24 px).
     } else if (toolId === 'sticker') {
       const h4 = document.createElement('h4');
       h4.textContent = 'Stickers';
@@ -166,14 +222,21 @@ const Tech = {
       Tools.currentTool = 'sticker';
       Tools.brushSize = 8;
       Tools.setup('tech-canvas');
+
+    // Glitter: the shared glitter tool.
     } else if (toolId === 'glitter') {
       this._buildPaintPanel(side, 'Glitter');
       Tools.currentTool = 'glitter';
       Tools.setup('tech-canvas');
+
+    // Paint: the shared round brush.
     } else if (toolId === 'dye') {
       this._buildPaintPanel(side, 'Paint');
       Tools.currentTool = 'dye';
       Tools.setup('tech-canvas');
+
+    // Eraser: the shared eraser at a radius of 15 px (it removes 30 px wide), plus a button that repaints the device from
+    // scratch (removing everything painted).
     } else if (toolId === 'eraser') {
       Tools.currentTool = 'eraser';
       Tools.brushSize = 15;
@@ -194,6 +257,10 @@ const Tech = {
     }
   },
 
+  // Shared options for the spray, glitter and paint tools: a heading ("<label> Color"), a colour button, 12 quick colours and a
+  // size slider (2-30 px) bound to Tools.brushSize.
+  // @param {HTMLElement} side - The #tech-side element to fill.
+  // @param {string} label - Tool name used in the heading ('Spray Paint', 'Glitter' or 'Paint').
   _buildPaintPanel(side, label) {
     const h4 = document.createElement('h4');
     h4.textContent = label + ' Color';
@@ -232,6 +299,8 @@ const Tech = {
   },
 
   /* ===== DRAW ===== */
+  // Shows a faint hint message in the middle of the empty canvas.
+  // @param {string} msg - Text to show.
   _drawPlaceholder(msg) {
     const c = document.getElementById('tech-canvas');
     const ctx = c.getContext('2d');
@@ -242,6 +311,7 @@ const Tech = {
     ctx.fillText(msg, c.width/2, c.height/2);
   },
 
+  // Clears the canvas and paints the selected device in the centre. Does nothing until a device is selected.
   _drawDevice() {
     const c = document.getElementById('tech-canvas');
     if (!c || !this.deviceType) return;
@@ -253,6 +323,8 @@ const Tech = {
     const d = DEVICE_TYPES.find(t => t.id === this.deviceType);
     if (!d) return;
 
+    // The device's width and height from DEVICE_TYPES (pixels: phone 120x220, tablet 220x160). The earbud case is drawn at
+    // a fixed size, so its table size is not used.
     const sw = d.w, sh = d.h;
 
     if (this.deviceType === 'phone') {
@@ -264,8 +336,18 @@ const Tech = {
     }
   },
 
+  // Paints a phone: a soft shadow, a rounded-rectangle body, a dark screen inset by 12 px (and shifted 8 px down to leave room for
+  // the camera), a faint diagonal screen shine, a camera dot, a home bar, and a lighter metallic edge.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} cx - Centre x.
+  // @param {number} cy - Centre y.
+  // @param {number} sw - Body width in pixels.
+  // @param {number} sh - Body height in pixels.
   _drawPhone(ctx, cx, cy, sw, sh) {
+    // Corner radius of the body in pixels (a phone has rounder corners than a tablet).
     const r = 16;
+
+    // A translucent black copy of the body offset 4 px down and right gives a drop shadow.
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
     this._roundRect(ctx, cx - sw/2 + 4, cy - sh/2 + 4, sw, sh, r);
@@ -285,6 +367,7 @@ const Tech = {
     this._roundRect(ctx, cx - sw/2 + margin, cy - sh/2 + margin + 8, sw - margin*2, sh - margin*2 - 16, 8);
     ctx.fill();
 
+    // A triangle of 5% white from the screen's top corners to the left side suggests a glass reflection.
     // Screen shine
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
     ctx.beginPath();
@@ -305,6 +388,7 @@ const Tech = {
     this._roundRect(ctx, cx - 20, cy + sh/2 - 14, 40, 4, 2);
     ctx.fill();
 
+    // The edge colour is the body colour 15 lightness points lighter (capped at 100), so it works for any body colour.
     // Metallic edge
     const [dh,ds,dl] = U.hexToHsl(this.deviceColor);
     ctx.strokeStyle = U.hslToHex(dh, ds, Math.min(100, dl + 15));
@@ -313,6 +397,13 @@ const Tech = {
     ctx.stroke();
   },
 
+  // Paints a tablet: the same layers as the phone with a thinner 10 px bezel, a smaller corner radius (14), a smaller camera
+  // dot at the top edge and a fainter shine.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} cx - Centre x.
+  // @param {number} cy - Centre y.
+  // @param {number} sw - Body width in pixels.
+  // @param {number} sh - Body height in pixels.
   _drawTablet(ctx, cx, cy, sw, sh) {
     const r = 14;
     ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -351,6 +442,11 @@ const Tech = {
     ctx.stroke();
   },
 
+  // Paints an earbud charging case (90x100 px, corner radius 20) with a hinge line, a green LED and two faint earbud outlines
+  // with stems inside the lid area.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} cx - Centre x.
+  // @param {number} cy - Centre y.
   _drawAirpods(ctx, cx, cy) {
     // Case
     const caseW = 90, caseH = 100, caseR = 20;
@@ -394,6 +490,13 @@ const Tech = {
     });
   },
 
+  // Builds (but does not fill or stroke) a rounded-rectangle path from four arcTo corners. Callers choose fill or stroke.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} x - Left edge.
+  // @param {number} y - Top edge.
+  // @param {number} w - Width.
+  // @param {number} h - Height.
+  // @param {number} r - Corner radius (must not exceed half the width or height).
   _roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -405,8 +508,12 @@ const Tech = {
   },
 
   /* ===== FINISH ===== */
+  // "Done" handler: saves a picture of the design to the closet (type 'tech'), awards 50 XP, saves, and leaves (the level-up
+  // screen if a level was gained, otherwise the workshop).
   finish() {
     const c = document.getElementById('tech-canvas');
+
+    // Only store an item when a device was actually chosen. The XP below is awarded regardless.
     if (c && this.deviceType) {
       const imageData = c.toDataURL('image/png');
       const d = DEVICE_TYPES.find(t => t.id === this.deviceType);
@@ -421,6 +528,8 @@ const Tech = {
     }
 
     Sound.play('complete');
+
+    // Award XP; the extra Game.save() is redundant (addXP saves) but harmless.
     Game.addXP(50);
     Game.save();
     if (Game.checkLevelUp()) Game.goTo('levelup');
