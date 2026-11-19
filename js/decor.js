@@ -6,13 +6,50 @@
 //          Renders blankets, pillows, and rugs with procedural woven patterns,
 //          fringes, corner tassels, and pearl borders, exporting crafted textile items
 //          directly into the player's wardrobe and apartment inventory.
+// FILE OVERVIEW
+// decor.js is the Home Decor station (#decor-screen in index.html): the player chooses a blanket,
+// pillow or rug, sets its colour and pattern, adds tassels, fringe or a pearl border, decorates it
+// with paint, glitter and stickers, and presses Done to save a picture of it in the closet.
+//
+// Who calls it: Game.goTo('decor') calls Decor.init(); the Done button calls Decor.finish(). It uses
+// Tools (painting on #decor-canvas), ColorWheel, Icons, Sound, U (colour maths, drawStar), DECOR_TYPES
+// (utils.js) and Game (addToCloset, addXP, save, checkLevelUp, goTo).
+//
+// Layout: the usual three columns: #decor-tools (tool buttons), #decor-canvas (the item) and
+// #decor-side (options). _buildTools makes the buttons; _buildSidePanel(toolId) picks one of the
+// panel builders; the painting tools also attach Tools to the canvas.
+//
+// State on Decor: decorType (id or null), baseColor, patternType, tassels and fringe (booleans).
+// _drawDecorItem() repaints the item from this state: clip to the item's outline, fill with the base
+// colour, draw the pattern, remove the clip, then outline, extras, a floor shadow and the item's name.
+// Pearl border, paint, glitter and stickers are drawn straight onto the canvas and are erased by the
+// next _drawDecorItem() (for example when the colour changes).
+//
+// Known limits / things to watch:
+//   - Tools.setup() swaps the canvas for a blank clone (see salon.js for the observation), so choosing
+//     a painting tool can blank the item until it is redrawn.
+//   - Icons.get() is called with 'blanket', 'pillow' and 'rug', which icons.js does not define, so the
+//     picker shows the fallback star icon.
+//   - Tassels and fringe use Math.random on every redraw, so they look slightly different each time.
+//   - finish() awards 45 XP even if no item was chosen (nothing is added to the closet then).
+// How to test: Game.goTo('decor'); Decor.decorType = 'rug'; Decor.patternType = 'stars'; Decor._drawDecorItem().
 // ==============================================================================
 /* ===== HOME DECOR STUDIO WORKSTATION ===== */
+// Singleton controller for the Home Decor station.
 const Decor = {
+  // Chosen item id from DECOR_TYPES ('blanket', 'pillow', 'rug') or null until one is picked.
   decorType: null,
+
+  // Fabric colour (default medium purple), changed in the Fabric panel.
   baseColor: '#9370DB',
+
+  // Pattern id: 'solid', 'stripes', 'polka', 'plaid', 'chevron', 'diamonds', 'floral' or 'stars' (the list in _buildPatternPanel).
   patternType: 'solid',
+
+  // Whether corner tassels are drawn.
   tassels: false,
+
+  // Whether fringe along the bottom edge is drawn.
   fringe: false,
 
   /**
@@ -23,9 +60,12 @@ const Decor = {
     if (!c) return;
     const parent = c.parentElement;
     const rect = parent.getBoundingClientRect();
+
+    // Fit the canvas into the space beside the side panels (70 px tool column + 220 px options panel = 290 px), at most 700 x 500. This also clears it.
     c.width = Math.min(rect.width - 290, 700);
     c.height = Math.min(rect.height, 500);
 
+    // Each visit starts without an item and without extras; colour and pattern are remembered from the last visit.
     this.decorType = null;
     this.tassels = false;
     this.fringe = false;
@@ -34,11 +74,13 @@ const Decor = {
   },
 
   /* ===== TOOLS ===== */
+  // Creates the tool buttons in #decor-tools: Item, Fabric, Pattern, Paint, Sticker, Glitter, Extras and Eraser.
   _buildTools() {
     const tools = document.getElementById('decor-tools');
     if (!tools) return;
     tools.innerHTML = '';
 
+    // Each entry: id (passed to _buildSidePanel), icon (a key in Icons.paths) and label.
     const toolList = [
       { id: 'pick', icon: 'decor', label: 'Item' },
       { id: 'fabric', icon: 'fabric', label: 'Fabric' },
@@ -56,6 +98,8 @@ const Decor = {
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
+
+      // Select the tool: move the highlight, click sound, and rebuild the options panel.
       btn.onclick = () => {
         tools.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -66,6 +110,8 @@ const Decor = {
     });
   },
 
+  // Rebuilds #decor-side for the selected tool; the painting tools also set the shared Tools tool and attach it to the canvas.
+  // @param {string} toolId - 'pick', 'fabric', 'pattern', 'dye', 'sticker', 'glitter', 'extras' or 'eraser'.
   _buildSidePanel(toolId) {
     const side = document.getElementById('decor-side');
     if (!side) return;
@@ -79,6 +125,8 @@ const Decor = {
       case 'sticker': this._buildStickerPanel(side); break;
       case 'glitter': this._buildGlitterPanel(side); break;
       case 'extras': this._buildExtrasPanel(side); break;
+
+      // Eraser: the shared eraser with a 15 px radius, plus a button that redraws the item from its settings, which removes everything painted on top.
       case 'eraser':
         Tools.currentTool = 'eraser'; Tools.brushSize = 15; Tools.setup('decor-canvas');
         const h4 = document.createElement('h4'); h4.textContent = 'Eraser'; side.appendChild(h4);
@@ -96,6 +144,8 @@ const Decor = {
   },
 
   /* ===== PICK PANEL ===== */
+  // Item picker: one cell per entry in DECOR_TYPES. Choosing one draws it immediately.
+  // @param {HTMLElement} side - The #decor-side element to fill.
   _buildPickPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Choose Item';
@@ -106,6 +156,8 @@ const Decor = {
       DECOR_TYPES.forEach(d => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.decorType === d.id ? ' active' : '');
+
+      // Icon plus name. The icon id equals the item id, which icons.js does not define, so the fallback star shows.
       cell.innerHTML = `<div style="text-align:center"><div>${Icons.get(d.id, 24)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${d.name}</div></div>`;
       cell.onclick = () => {
         this.decorType = d.id;
@@ -118,6 +170,7 @@ const Decor = {
     });
     side.appendChild(grid);
 
+    // Until an item is chosen, show a hint on the cleared canvas.
     if (!this.decorType) {
       const c = document.getElementById('decor-canvas');
       const ctx = c.getContext('2d');
@@ -129,6 +182,8 @@ const Decor = {
   },
 
   /* ===== FABRIC PANEL ===== */
+  // Base colour: a button that opens the wheel and 16 quick colours (purple, pinks, gold, blue, green, coral, turquoise, then soft cream, tan and pastel shades).
+  // @param {HTMLElement} side - The #decor-side element to fill.
   _buildFabricPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Base Color';
@@ -162,6 +217,8 @@ const Decor = {
   },
 
   /* ===== PATTERN PANEL ===== */
+  // Pattern grid: eight patterns. This list is separate from FABRIC_PATTERNS in utils.js: it adds 'chevron' and 'diamonds' and omits 'hearts' and 'zigzag'.
+  // @param {HTMLElement} side - The #decor-side element to fill.
   _buildPatternPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Pattern';
@@ -198,6 +255,8 @@ const Decor = {
   },
 
   /* ===== PAINT PANEL ===== */
+  // Shared options for paint and glitter: a colour button, 12 quick colours and a size slider (2-30 px) bound to Tools.brushSize.
+  // @param {HTMLElement} side - The #decor-side element to fill.
   _buildPaintPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Paint Color';
@@ -232,6 +291,8 @@ const Decor = {
   },
 
   /* ===== STICKER PANEL ===== */
+  // Sticker grid: 20 home-themed emoji. Picking one sets Tools.currentSticker; the player clicks on the canvas to place it (24 px).
+  // @param {HTMLElement} side - The #decor-side element to fill.
   _buildStickerPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Stickers';
@@ -260,6 +321,8 @@ const Decor = {
   },
 
   /* ===== GLITTER PANEL ===== */
+  // Glitter uses the same colour and size options as paint, with the glitter tool.
+  // @param {HTMLElement} side - The #decor-side element to fill.
   _buildGlitterPanel(side) {
     this._buildPaintPanel(side);
     Tools.currentTool = 'glitter';
@@ -267,6 +330,9 @@ const Decor = {
   },
 
   /* ===== EXTRAS PANEL ===== */
+  // Extras: toggle buttons for tassels and fringe (each redraws the item) and a button that adds a pearl border. The toggles show their state in
+  // their label and button style; the pearl border has no off switch (it is part of the canvas pixels).
+  // @param {HTMLElement} side - The #decor-side element to fill.
   _buildExtrasPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Extra Details';
@@ -313,6 +379,7 @@ const Decor = {
   },
 
   /* ===== DRAWING ===== */
+  // Repaints the whole item from the current settings and clears whatever was on the canvas. Does nothing until an item is selected.
   _drawDecorItem() {
     const c = document.getElementById('decor-canvas');
     if (!c || !this.decorType) return;
@@ -324,23 +391,28 @@ const Decor = {
     const d = DECOR_TYPES.find(t => t.id === this.decorType);
     if (!d) return;
 
+    // Item size in pixels from DECOR_TYPES (blanket 250x200, pillow 150x150, rug 250x160).
     const dw = d.w, dh = d.h;
 
+    // Clip to the item's outline so the colour and pattern (drawn as big rectangles) only appear inside it.
     // Draw base shape
     ctx.save();
     this._getDecorPath(ctx, this.decorType, cx, cy, dw, dh);
     ctx.clip();
 
+    // The rectangle is twice the item's size, centred on it, so it always covers the whole outline.
     // Base color
     ctx.fillStyle = this.baseColor;
     ctx.fillRect(cx - dw, cy - dh, dw*2, dh*2);
 
+    // Pattern colours derived from the base: a darker tone (18 lightness points down) and a lighter tone (15 up).
     // Pattern
     const [ph, ps, pl] = U.hexToHsl(this.baseColor);
     const patDark = U.hslToHex(ph, ps, Math.max(0, pl - 18));
     const patLight = U.hslToHex(ph, ps, Math.min(100, pl + 15));
     this._drawPattern(ctx, cx - dw, cy - dh, dw*2, dh*2, patDark, patLight);
 
+    // Remove the clip so the outline, tassels and fringe (which stick out of the shape) can be drawn.
     ctx.restore();
 
     // Outline
@@ -353,6 +425,7 @@ const Decor = {
     if (this.tassels) this._drawTassels(ctx, cx, cy, dw, dh);
     if (this.fringe) this._drawFringe(ctx, cx, cy, dw, dh);
 
+    // A faint ellipse below the item suggests it sits on the floor.
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.08)';
     ctx.beginPath();
@@ -366,9 +439,17 @@ const Decor = {
     ctx.fillText(d.name, cx, cy + dh/2 + 35);
   },
 
+  // Builds (without painting) the outline path of an item centred on (cx, cy). Used for clipping and for stroking the outline.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {string} type - 'blanket', 'pillow' or 'rug'.
+  // @param {number} cx - Centre x.
+  // @param {number} cy - Centre y.
+  // @param {number} w - Item width in pixels.
+  // @param {number} h - Item height in pixels.
   _getDecorPath(ctx, type, cx, cy, w, h) {
     ctx.beginPath();
     switch(type) {
+      // Blanket: a rectangle with 12 px rounded corners (four arcTo calls).
       case 'blanket':
         // Soft rectangle with slightly rounded corners
         const br = 12;
@@ -379,6 +460,8 @@ const Decor = {
         ctx.arcTo(cx - w/2, cy - h/2, cx + w/2, cy - h/2, br);
         ctx.closePath();
         break;
+
+      // Pillow: four quadratic curves that bulge slightly outside the rectangle by 10 px, which gives a puffy cushion shape.
       case 'pillow':
         // Puffy shape
         ctx.moveTo(cx - w/2 + 15, cy - h/2 + 5);
@@ -388,6 +471,8 @@ const Decor = {
         ctx.quadraticCurveTo(cx - w/2 - 10, cy, cx - w/2 + 15, cy - h/2 + 5);
         ctx.closePath();
         break;
+
+      // Rug: an ellipse.
       case 'rug':
         // Oval
         ctx.ellipse(cx, cy, w/2, h/2, 0, 0, Math.PI*2);
@@ -395,17 +480,29 @@ const Decor = {
     }
   },
 
+  // Draws the selected pattern over the rectangle (x, y, w, h); the clip set by the caller keeps it inside the item. Every pattern tiles from the
+  // rectangle's top-left corner; alternate rows are shifted by half a cell to make a brick-like layout.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} x - Left of the area to fill.
+  // @param {number} y - Top of the area to fill.
+  // @param {number} w - Width of the area.
+  // @param {number} h - Height of the area.
+  // @param {string} dark - Darker tone of the base colour, for lines and dots.
+  // @param {string} light - Lighter tone, for flowers and stars.
   _drawPattern(ctx, x, y, w, h, dark, light) {
     ctx.fillStyle = dark;
     ctx.strokeStyle = dark;
 
     switch(this.patternType) {
+      // Diagonal stripes 8 px wide every 24 px, each running at 45 degrees (the line from (dx, 0) goes to (dx + h, h)).
       case 'stripes':
         ctx.lineWidth = 8;
         for (let dx = -h; dx < w + h; dx += 24) {
           ctx.beginPath(); ctx.moveTo(x + dx, y); ctx.lineTo(x + dx + h, y + h); ctx.stroke();
         }
         break;
+
+      // Dots of radius 5 every 28 px; every second row is shifted 14 px.
       case 'polka':
         for (let dy = 0; dy < h; dy += 28) {
           for (let dx = (dy % 56 < 28 ? 0 : 14); dx < w; dx += 28) {
@@ -413,6 +510,8 @@ const Decor = {
           }
         }
         break;
+
+      // Translucent (25%) crossing bands 10 px wide every 35 px; overlaps look darker, like woven plaid.
       case 'plaid':
         ctx.globalAlpha = 0.25;
         ctx.lineWidth = 10;
@@ -420,6 +519,8 @@ const Decor = {
         for (let dy = 0; dy < h; dy += 35) { ctx.beginPath(); ctx.moveTo(x, y+dy); ctx.lineTo(x+w, y+dy); ctx.stroke(); }
         ctx.globalAlpha = 1;
         break;
+
+      // Rows of V shapes: each is a short up-and-down zigzag 30 px wide and 10 px tall, repeated every 20 px vertically.
       case 'chevron':
         ctx.strokeStyle = dark;
         ctx.lineWidth = 4;
@@ -433,6 +534,8 @@ const Decor = {
           ctx.stroke();
         }
         break;
+
+      // Small squares (12 px) rotated 45 degrees, forming diamonds on a 30 px grid with alternate rows offset 15 px.
       case 'diamonds':
         for (let dy = 0; dy < h; dy += 30) {
           for (let dx = (dy % 60 < 30 ? 0 : 15); dx < w; dx += 30) {
@@ -443,6 +546,8 @@ const Decor = {
           }
         }
         break;
+
+      // Flowers every 55 px: five light petals (radius 5) around a dark centre (radius 3), in alternating offset rows.
       case 'floral':
         for (let dy = 25; dy < h; dy += 55) {
           for (let dx = (dy % 110 < 55 ? 25 : 50); dx < w; dx += 55) {
@@ -456,6 +561,8 @@ const Decor = {
           }
         }
         break;
+
+      // Light 5-point stars (radius 9) every 45 px, alternating row offsets.
       case 'stars':
         for (let dy = 20; dy < h; dy += 45) {
           for (let dx = (dy % 90 < 45 ? 20 : 42); dx < w; dx += 45) {
@@ -467,6 +574,13 @@ const Decor = {
     }
   },
 
+  // Draws a tassel at each of the four corners of the rectangle: six short strands in random directions (a 90 degree spread pointing
+  // downward) with a darker knot. Random, so the tassels change each redraw.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} cx - Item centre x.
+  // @param {number} cy - Item centre y.
+  // @param {number} w - Item width in pixels.
+  // @param {number} h - Item height in pixels.
   _drawTassels(ctx, cx, cy, w, h) {
     const corners = [
       [cx - w/2, cy - h/2],
@@ -491,6 +605,12 @@ const Decor = {
     });
   },
 
+  // Draws short threads hanging off the bottom edge of the bounding rectangle, one every 6 px, 10-18 px long with a slight random sway.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} cx - Item centre x.
+  // @param {number} cy - Item centre y.
+  // @param {number} w - Item width in pixels.
+  // @param {number} h - Item height in pixels.
   _drawFringe(ctx, cx, cy, w, h) {
     const [bh,bs,bl] = U.hexToHsl(this.baseColor);
     ctx.strokeStyle = U.hslToHex(bh, bs, Math.max(0, bl - 10));
@@ -504,6 +624,9 @@ const Decor = {
     }
   },
 
+  // Adds a ring of pearls along the item's edge, drawn directly onto the canvas on top of everything. Each pearl is a small radial-gradient sphere
+  // with a highlight. A blanket gets pearls along its rectangle every 14 px; pillow and rug get pearls around their ellipse (the pillow's ring is 90% of its size
+  // so it sits inside the puffy outline).
   _drawPearlBorder() {
     const c = document.getElementById('decor-canvas');
     if (!c || !this.decorType) return;
@@ -513,9 +636,12 @@ const Decor = {
     if (!d) return;
 
     const w = d.w, h = d.h;
+
+    // Pearl radius in pixels.
     const pearlSize = 4;
 
     // Draw pearls around shape border
+    // Pearl centres, built per shape: spacing 14 px along the blanket sides, or an angle step of 0.25 rad (pillow) or 0.2 rad (rug) around the ellipse.
     let points = [];
     if (this.decorType === 'blanket') {
       for (let x = cx-w/2; x <= cx+w/2; x += 14) { points.push([x, cy-h/2]); points.push([x, cy+h/2]); }
@@ -530,6 +656,8 @@ const Decor = {
       }
     }
 
+    // Each pearl: a radial gradient offset 1 px toward the upper left (white to pale lilac to a darker grey-violet rim) gives a spherical look, and a small white spot is
+    // the shine.
     points.forEach(([px, py]) => {
       const grad = ctx.createRadialGradient(px-1, py-1, 0, px, py, pearlSize);
       grad.addColorStop(0, '#fff');
@@ -543,8 +671,11 @@ const Decor = {
   },
 
   /* ===== FINISH ===== */
+  // "Done": saves a picture of the decorated item in the closet (type 'decor'), awards 45 XP, saves, and leaves (the level-up screen if a level was gained, otherwise the workshop).
   finish() {
     const c = document.getElementById('decor-canvas');
+
+    // Only add a closet item when an item was actually chosen; the XP below is awarded regardless.
     if (c && this.decorType) {
       const imageData = c.toDataURL('image/png');
       const d = DECOR_TYPES.find(t => t.id === this.decorType);
