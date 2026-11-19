@@ -6,13 +6,50 @@
 //          Renders dimensional hardcover books with spine creases, gilded filigree
 //          borders, embossed genre cover art, customizable typography, and sticker
 //          stamps for resale in the player's fashion boutique.
+// FILE OVERVIEW
+// books.js is the Book Shop station (#books-screen in index.html): the player picks a genre, a
+// cover colour and accent colour, a title, optional paint/glitter/stickers on the cover, or lets the
+// game roll a random book. "Done" saves a picture of the book in the closet so it can be sold to
+// customers.
+//
+// Who calls it: Game.goTo('books') calls Books.init(); the screen's Done button calls Books.finish().
+// It uses Tools (painting on #books-canvas), ColorWheel, Icons, Sound, U (random picks, colour maths),
+// BOOK_GENRES and BOOK_TITLES_RANDOM (utils.js) and Game (addToCloset, addXP, save, checkLevelUp, goTo).
+//
+// Layout: the usual three columns: #books-tools (tool buttons), #books-canvas (the book) and
+// #books-side (options). _buildTools creates the buttons; _buildSidePanel(toolId) picks one of the
+// panel builders (create, cover, decorate, sticker, title, random).
+//
+// State on Books: bookTitle (text, up to 30 characters), bookGenre (one of BOOK_GENRES or null until
+// chosen), bookColor (cover), bookAccentColor (border, ornaments and title text) and isRandom. The book
+// picture needs a genre, so nothing is drawn until one is chosen. _drawBook() repaints the book from
+// this state and wipes any paint or stickers.
+//
+// Known limits / things to watch:
+//   - Tools.setup() swaps the canvas for a blank clone (see salon.js for the observation), so opening the
+//     Decorate or Sticker panel blanks the canvas until _drawBook() runs again (for example after typing a title).
+//   - Every genre cell shows the same 'books' icon; the genreEmojis table is defined but not shown.
+//   - The title is typed by the player. It is drawn with fillText (safe), but it is also saved as the item's
+//     name, which Game._serveCustomer later inserts as HTML.
+//   - `isRandom` is set but never read.
+// How to test: Game.goTo('books'); Books.bookGenre = 'Fantasy'; Books.bookTitle = 'Test'; Books._drawBook() in the console.
 // ==============================================================================
 /* ===== BOOK SHOP WORKSTATION ===== */
+// Singleton controller for the Book Shop station.
 const Books = {
+  // Title text, empty until typed or chosen. If empty when saved, the closet name becomes "The <Genre> Book".
   bookTitle: '',
+
+  // Genre chosen from BOOK_GENRES; null means no book has been started (nothing is drawn and Done is refused).
   bookGenre: null,
+
+  // Cover colour (default saddle brown, like a leather-bound book).
   bookColor: '#8B4513',
+
+  // Accent colour used for the border, corner dots, title and genre label (default gold).
   bookAccentColor: '#FFD700',
+
+  // Set to true by the Random tool; never read by any other code.
   isRandom: false,
 
   /**
@@ -23,9 +60,12 @@ const Books = {
     if (!c) return;
     const parent = c.parentElement;
     const rect = parent.getBoundingClientRect();
+
+    // Fit the canvas into the space beside the side panels (70 px tool column + 220 px options panel = 290 px), at most 700 x 500. This also clears it.
     c.width = Math.min(rect.width - 290, 700);
     c.height = Math.min(rect.height, 500);
 
+    // Each visit starts a new, empty book; colours are remembered from the last visit.
     this.bookTitle = '';
     this.bookGenre = null;
     this.isRandom = false;
@@ -34,11 +74,13 @@ const Books = {
   },
 
   /* ===== TOOLS ===== */
+  // Creates the tool buttons in #books-tools: Create (genre), Cover (colours), Decorate (paint), Sticker, Title and Random.
   _buildTools() {
     const tools = document.getElementById('books-tools');
     if (!tools) return;
     tools.innerHTML = '';
 
+    // Each entry: id (passed to _buildSidePanel), icon (a key in Icons.paths) and label.
     const toolList = [
       { id: 'create', icon: 'books', label: 'Create' },
       { id: 'cover', icon: 'palette', label: 'Cover' },
@@ -54,6 +96,8 @@ const Books = {
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
       btn.style.flexDirection = 'column';
       btn.title = t.label;
+
+      // Select the tool: move the highlight, click sound, and rebuild the options panel.
       btn.onclick = () => {
         tools.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -64,6 +108,8 @@ const Books = {
     });
   },
 
+  // Rebuilds #books-side for the selected tool.
+  // @param {string} toolId - 'create', 'cover', 'decorate', 'sticker', 'title' or 'random'.
   _buildSidePanel(toolId) {
     const side = document.getElementById('books-side');
     if (!side) return;
@@ -80,6 +126,8 @@ const Books = {
   },
 
   /* ===== CREATE PANEL ===== */
+  // Genre picker: one cell per entry in BOOK_GENRES. Choosing one draws the book straight away.
+  // @param {HTMLElement} side - The #books-side element to fill.
   _buildCreatePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Book Genre';
@@ -87,6 +135,8 @@ const Books = {
 
     const grid = document.createElement('div');
     grid.className = 'item-grid';
+
+    // An emoji per genre. Defined for a nicer genre picker but not used by the code below, which shows the same book icon in every cell.
     const genreEmojis = {
       Fantasy: '🧙', Romance: '💕', Mystery: '🔍', 'Sci-Fi': '🚀',
       Adventure: '⛰️', Cooking: '🍳', Art: '🎨', Poetry: '📝',
@@ -108,6 +158,7 @@ const Books = {
     });
     side.appendChild(grid);
 
+    // Until a genre is chosen, show a hint on the cleared canvas.
     if (!this.bookGenre) {
       const c = document.getElementById('books-canvas');
       const ctx = c.getContext('2d');
@@ -119,6 +170,8 @@ const Books = {
   },
 
   /* ===== COVER PANEL ===== */
+  // Two colour pickers: the cover colour (button + 16 quick colours: browns, dark jewel tones, brights, creams, silver) and the accent colour (button + 8 quick colours). Each change redraws the book.
+  // @param {HTMLElement} side - The #books-side element to fill.
   _buildCoverPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Cover Color';
@@ -151,6 +204,7 @@ const Books = {
     });
     side.appendChild(qg);
 
+    // The accent colour is used for the border, the corner dots, the title and the genre label.
     // Accent color
     const h4b = document.createElement('h4');
     h4b.textContent = 'Accent Color';
@@ -184,6 +238,9 @@ const Books = {
   },
 
   /* ===== DECORATE PANEL ===== */
+  // Paint on the cover: colour button, 10 quick colours, a choice of brush, glitter or eraser, and a brush-size slider (2-20 px).
+  // It then attaches Tools to the canvas, which blanks it (see the file overview).
+  // @param {HTMLElement} side - The #books-side element to fill.
   _buildDecoratePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Paint on Cover';
@@ -207,6 +264,8 @@ const Books = {
     });
     side.appendChild(qGrid);
 
+    // Brush / glitter / eraser buttons. Clicking one sets Tools.currentTool and shows it as the primary (highlighted) button. No button is highlighted when
+    // the panel first opens, although the brush is already selected.
     // Tool sub-selection
     const h4b = document.createElement('h4');
     h4b.textContent = 'Tool';
@@ -247,12 +306,15 @@ const Books = {
     slider.oninput = () => { Tools.brushSize = parseInt(slider.value); };
     side.appendChild(slider);
 
+    // Start with the round brush at a fine size (5 px) and attach the mouse handlers to the book canvas.
     Tools.currentTool = 'dye';
     Tools.brushSize = 5;
     Tools.setup('books-canvas');
   },
 
   /* ===== STICKER PANEL ===== */
+  // Sticker grid: 24 book- and decoration-themed emoji. Picking one sets Tools.currentSticker; the player clicks on the cover to place it (24 px).
+  // @param {HTMLElement} side - The #books-side element to fill.
   _buildStickerPanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Book Stickers';
@@ -282,6 +344,8 @@ const Books = {
   },
 
   /* ===== TITLE PANEL ===== */
+  // Title editor: a text field (max 30 characters) that redraws the book on every keystroke, and four genre-based title suggestions to click.
+  // @param {HTMLElement} side - The #books-side element to fill.
   _buildTitlePanel(side) {
     const h4 = document.createElement('h4');
     h4.textContent = 'Book Title';
@@ -293,12 +357,15 @@ const Books = {
     input.value = this.bookTitle;
     input.maxLength = 30;
     input.style.cssText = 'width:100%;padding:8px 12px;border:1px solid rgba(255,255,255,0.15);border-radius:8px;background:rgba(255,255,255,0.05);color:#fff;font-family:var(--font-display);font-size:14px;margin-bottom:10px;box-sizing:border-box;';
+
+    // Update live: store the text and repaint the book so the title appears as it is typed.
     input.oninput = () => {
       this.bookTitle = input.value;
       this._drawBook();
     };
     side.appendChild(input);
 
+    // Clicking a suggestion fills the field and the book title together.
     // Quick title suggestions based on genre
     const h4b = document.createElement('h4');
     h4b.textContent = 'Suggestions';
@@ -321,6 +388,8 @@ const Books = {
     });
   },
 
+  // Returns four title ideas for the current genre (a fixed table), or the first four random titles if no genre is chosen yet.
+  // @returns {string[]} Four title strings.
   _getTitleSuggestions() {
     const genreTitles = {
       Fantasy: ['The Crystal Kingdom', 'Dragon\'s Gift', 'Enchanted Threads', 'Moonlit Spells'],
@@ -338,10 +407,15 @@ const Books = {
   },
 
   /* ===== RANDOM BOOK ===== */
+  // The Random tool: picks a random genre, title and colours, shows a summary and a re-roll button, and draws the result. Calling it again (Roll Again) re-rolls
+  // and re-draws the summary; the old summary is not removed first, so repeated rolls stack summaries in the panel.
+  // @param {HTMLElement} side - The #books-side element to fill.
   _generateRandom(side) {
     this.isRandom = true;
     this.bookGenre = U.pick(BOOK_GENRES);
     this.bookTitle = U.pick(BOOK_TITLES_RANDOM);
+
+    // Random cover from eight dark or rich colours and a random accent from five light ones, so the title stays readable.
     this.bookColor = U.pick(['#8B4513','#1a1a2e','#800020','#006400','#191970','#4B0082','#DC143C','#FF69B4']);
     this.bookAccentColor = U.pick(['#FFD700','#C0C0C0','#FFFFFF','#FF69B4','#00CED1']);
 
@@ -351,6 +425,8 @@ const Books = {
 
     const info = document.createElement('div');
     info.style.cssText = 'padding:12px;background:rgba(255,255,255,0.05);border-radius:8px;margin-top:8px;';
+
+    // Summary of the rolled book. The values inserted come from the game's own constant lists, not from user input, so they are safe to put in HTML.
     info.innerHTML = `
       <div style="font-size:13px;margin-bottom:6px;"><strong>Genre:</strong> ${this.bookGenre}</div>
       <div style="font-size:13px;margin-bottom:6px;"><strong>Title:</strong> ${this.bookTitle}</div>
@@ -363,6 +439,7 @@ const Books = {
     `;
     side.appendChild(info);
 
+    // Roll again: play a sound and call this function again on the same panel.
     // Re-roll button
     const reroll = document.createElement('button');
     reroll.className = 'btn btn-accent';
@@ -379,6 +456,8 @@ const Books = {
   },
 
   /* ===== DRAW BOOK ===== */
+  // Repaints the book from the current state: shadow, page edges, cover, a subtle gradient, spine highlight, a decorative border with corner dots, the wrapped title,
+  // the genre label and a lighter outline. Does nothing until a genre is chosen. Everything is positioned relative to the canvas centre; the book is 160 x 220 px.
   _drawBook() {
     const c = document.getElementById('books-canvas');
     if (!c || !this.bookGenre) return;
@@ -387,13 +466,17 @@ const Books = {
     ctx.clearRect(0, 0, w, h);
 
     const cx = w/2, cy = h/2;
+
+    // Book width and height in pixels, chosen so the book fits the 500 px canvas height with room for the shadow.
     const bw = 160, bh = 220; // book dimensions
 
+    // A translucent black copy of the cover shape offset 6 px down and right.
     // Book shadow
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     this._roundRect(ctx, cx - bw/2 + 6, cy - bh/2 + 6, bw, bh, 4);
     ctx.fill();
 
+    // The page block: a cream strip along the left edge with faint lines (every 4 px) to suggest stacked pages.
     // Book pages (side)
     ctx.fillStyle = '#F5F0E8';
     ctx.fillRect(cx - bw/2 + 3, cy - bh/2 + 5, 8, bh - 10);
@@ -407,12 +490,14 @@ const Books = {
       ctx.stroke();
     }
 
+    // Cover in the book colour. `bkh, bks, bkl` are its hue, saturation and lightness, used at the end for the edge highlight.
     // Book cover - main
     const [bkh, bks, bkl] = U.hexToHsl(this.bookColor);
     ctx.fillStyle = this.bookColor;
     this._roundRect(ctx, cx - bw/2, cy - bh/2, bw, bh, 4);
     ctx.fill();
 
+    // A diagonal gradient from slightly lighter (top left) to slightly darker (bottom right) adds depth.
     // Cover texture - subtle gradient
     const grad = ctx.createLinearGradient(cx - bw/2, cy - bh/2, cx + bw/2, cy + bh/2);
     grad.addColorStop(0, 'rgba(255,255,255,0.08)');
@@ -422,10 +507,12 @@ const Books = {
     this._roundRect(ctx, cx - bw/2, cy - bh/2, bw, bh, 4);
     ctx.fill();
 
+    // A faint light strip down the left edge represents the book's spine.
     // Spine highlight
     ctx.fillStyle = 'rgba(255,255,255,0.06)';
     ctx.fillRect(cx - bw/2, cy - bh/2, 12, bh);
 
+    // A rounded rectangle border in the accent colour 12 px inside the cover edge, with a dot in each corner.
     // Decorative border
     ctx.strokeStyle = this.bookAccentColor;
     ctx.lineWidth = 2;
@@ -446,6 +533,7 @@ const Books = {
       ctx.fill();
     });
 
+    // Title text: bold 16 px, centred (shifted 4 px right to compensate for the spine on the left), with simple word wrapping.
     // Title
     if (this.bookTitle) {
       ctx.fillStyle = this.bookAccentColor;
@@ -453,6 +541,8 @@ const Books = {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
+      // Word wrap: add words to the current line until its measured width would exceed the available width (cover width minus 40 px); then start a new line. A single
+      // word longer than the width is kept on its own line (it can overflow).
       // Word wrap
       const words = this.bookTitle.split(' ');
       const maxWidth = bw - 40;
@@ -469,6 +559,7 @@ const Books = {
       });
       if (currentLine) lines.push(currentLine);
 
+      // Lines are 20 px apart and the block is centred vertically around 30 px below the book's centre, so the title sits below the middle (leaving the top for decorations).
       const lineH = 20;
       const startY = cy + 30 - ((lines.length - 1) * lineH) / 2;
       lines.forEach((line, i) => {
@@ -476,6 +567,7 @@ const Books = {
       });
     }
 
+    // Small, half-transparent genre name near the bottom edge.
     // Genre label at bottom
     ctx.fillStyle = this.bookAccentColor;
     ctx.globalAlpha = 0.5;
@@ -483,6 +575,7 @@ const Books = {
     ctx.fillText(this.bookGenre || '', cx + 4, cy + bh/2 - 22);
     ctx.globalAlpha = 1;
 
+    // A thin outline in the cover colour made 20 lightness points lighter, like a polished edge.
     // Shiny edge effect
     ctx.strokeStyle = U.hslToHex(bkh, bks, Math.min(100, bkl + 20));
     ctx.lineWidth = 1;
@@ -490,6 +583,13 @@ const Books = {
     ctx.stroke();
   },
 
+  // Builds (does not fill or stroke) a rounded-rectangle path from four arcTo corners. Callers choose fill or stroke.
+  // @param {CanvasRenderingContext2D} ctx - Target context.
+  // @param {number} x - Left edge.
+  // @param {number} y - Top edge.
+  // @param {number} w - Width.
+  // @param {number} h - Height.
+  // @param {number} r - Corner radius (must not exceed half the width or height).
   _roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -501,7 +601,9 @@ const Books = {
   },
 
   /* ===== FINISH ===== */
+  // "Done": saves a picture of the book in the closet (type 'books', with the genre), awards 35 XP, saves, and leaves (the level-up screen if a level was gained, otherwise the workshop).
   finish() {
+    // Refuse to finish without a genre (error sound, stay on the screen) because there would be no book to save.
     if (!this.bookGenre) {
       Sound.play('error');
       return;
