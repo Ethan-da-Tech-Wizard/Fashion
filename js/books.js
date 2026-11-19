@@ -448,6 +448,11 @@ const Books = {
     this.bookColor = U.pick(['#8B4513','#1a1a2e','#800020','#006400','#191970','#4B0082','#DC143C','#FF69B4']);
     this.bookAccentColor = U.pick(['#FFD700','#C0C0C0','#FFFFFF','#FF69B4','#00CED1']);
 
+    // Replace, don't append: Roll Again calls this function on the SAME panel, and every call appends a heading,
+    // summary and button, so without clearing first each roll stacked another copy (two Roll Again buttons after
+    // one reroll). _buildSidePanel already clears before the first call; this covers the re-rolls.
+    side.innerHTML = '';
+
     const h4 = document.createElement('h4');
     h4.textContent = '🎲 Random Book!';
     side.appendChild(h4);
