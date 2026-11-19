@@ -31,7 +31,8 @@
   at runtime by the owning module with createElement/innerHTML.
 
   Elements marked data-icon="name" are empty placeholders: Icons.init() (js/icons.js)
-  replaces their contents with inline SVG after the page loads.
+  is meant to replace their contents with inline SVG after the page loads (but see the bug note
+  above the final inline script: that call currently never runs).
 
   Running it: open index.html in a browser, or serve the folder (for example
   `python3 -m http.server`). Progress is stored in localStorage under the key
@@ -640,10 +641,13 @@
   <script src="js/game.js"></script>
 
   <!--
-    Hydrates every [data-icon] placeholder once the DOM is ready. The `window.Icons`
-    guard makes the page survive if icons.js failed to load. Note that dynamically
-    created buttons (e.g. station tool buttons) call Icons.get() themselves, because
-    this runs only once.
+    Intended to hydrate every [data-icon] placeholder once the DOM is ready, and to survive a failed
+    load of icons.js through the `window.Icons` guard. BUG [observed in headless Chrome: typeof window.Icons
+    is 'undefined' while typeof Icons is 'object', and 0 of the 22 data-icon placeholders contained an SVG]:
+    `const Icons` in a classic script does not create a property on `window`, so the guard is always false and
+    Icons.init() never runs; the static icons in this file (menu buttons, workshop cards, header buttons, closet tabs)
+    stay empty. A fix would test `typeof Icons !== 'undefined'` instead. Dynamically created buttons (station tool
+    buttons) are not affected because they call Icons.get() themselves.
   -->
   <script>
     // Initialize custom vector SVG icons once DOM parsing completes
