@@ -274,6 +274,10 @@ const Game = {
       closet: [], character: null,
       weather: 'sunny', soundOn: true, hasStarted: true,
     };
+
+    // Reset the avatar too: Character.data lives outside Game.state, so replacing state alone left the previous
+    // game's look in the creator (and in what finishCharacter() would save) after "New Game".
+    Character.reset();
     this.save();
     this.goTo('character');
   },

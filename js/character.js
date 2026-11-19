@@ -46,8 +46,8 @@
 // Singleton: there is exactly one player avatar.
 const Character = {
   // Default appearance used for a brand-new game (a long-haired character with a pink top and
-  // purple bottoms). Game.newGame() does NOT reset this object, so "New Game" after playing
-  // starts from the previous look until the player changes it. The shape is documented above.
+  // purple bottoms). Game.newGame() calls reset() to restore this look (it used to keep the previous
+  // game's avatar). The shape is documented above.
   // Active character appearance model schema
   data: {
     skinTone: '#FDDBB4',
@@ -1007,6 +1007,13 @@ const Character = {
   getData() { return JSON.parse(JSON.stringify(this.data)); },
 
   /**
+   * Restores the factory-default appearance (the literal at the top of this object). Called by Game.newGame()
+   * so a new game does not inherit the previous game's avatar. Replaces this.data with a fresh deep copy of
+   * DEFAULTS, so the object saved in Game.state.character is never mutated through it later.
+   */
+  reset() { this.data = JSON.parse(JSON.stringify(this.DEFAULTS)); },
+
+  /**
    * Replaces the appearance data wholesale (for example when loading a saved game) and refreshes
    * the creator UI and canvas. Note that Game.init() assigns Character.data directly instead of
    * calling this.
@@ -1019,3 +1026,7 @@ const Character = {
     this.render();
   }
 };
+
+// Snapshot of the default look, taken right after the object literal above is created (before any edit can
+// happen). reset() clones it; keeping one snapshot avoids duplicating the default literal in two places.
+Character.DEFAULTS = JSON.parse(JSON.stringify(Character.data));
