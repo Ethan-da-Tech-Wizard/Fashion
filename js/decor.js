@@ -1,12 +1,13 @@
 // ==============================================================================
 // Program: decor.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
-// Purpose: Interior design and studio decoration manager for Fashion City.
-//          Controls room furniture placement, wallpaper and flooring styles,
-//          lighting ambience, and decorative background objects.
+// Last Modified: November 19, 2026
+// Purpose: Home decor crafting workstation and textile customization engine.
+//          Renders blankets, pillows, and rugs with procedural woven patterns,
+//          fringes, corner tassels, and pearl borders, exporting crafted textile items
+//          directly into the player's wardrobe and apartment inventory.
 // ==============================================================================
-/* ===== HOME DECOR STUDIO ===== */
+/* ===== HOME DECOR STUDIO WORKSTATION ===== */
 const Decor = {
   decorType: null,
   baseColor: '#9370DB',
@@ -14,6 +15,9 @@ const Decor = {
   tassels: false,
   fringe: false,
 
+  /**
+   * Initializes Home Decor canvas, resets textile attributes, and populates tools.
+   */
   init() {
     const c = document.getElementById('decor-canvas');
     if (!c) return;

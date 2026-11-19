@@ -1,12 +1,13 @@
 // ==============================================================================
 // Program: books.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
-// Purpose: Fashion portfolio and lookbook catalog system.
-//          Manages saved snapshot collections, outfit presets, style magazines,
-//          and historical lookbook browsing for the player avatar.
+// Last Modified: November 19, 2026
+// Purpose: Publishing lookbook design station and hardcover literature crafting engine.
+//          Renders dimensional hardcover books with spine creases, gilded filigree
+//          borders, embossed genre cover art, customizable typography, and sticker
+//          stamps for resale in the player's fashion boutique.
 // ==============================================================================
-/* ===== BOOK SHOP ===== */
+/* ===== BOOK SHOP WORKSTATION ===== */
 const Books = {
   bookTitle: '',
   bookGenre: null,
@@ -14,6 +15,9 @@ const Books = {
   bookAccentColor: '#FFD700',
   isRandom: false,
 
+  /**
+   * Initializes Book Shop workstation canvas, resets literature attributes, and loads tools.
+   */
   init() {
     const c = document.getElementById('books-canvas');
     if (!c) return;

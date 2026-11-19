@@ -1,11 +1,11 @@
 /* ==============================================================================
    Program: style.css
    Programmer: Ethan-da-Tech-Wizard
-   Last Modified: November 18, 2026
+   Last Modified: November 19, 2026
    Purpose: Global styling and visual presentation engine for Fashion City.
             Implements dynamic CSS custom properties for room lighting, retro arcade
             aesthetic styling, animated weather overlays, responsive avatar rendering,
-            and customizable color palettes.
+            glassmorphism surfaces, and customizable color palettes.
    ============================================================================== */
 /* ===== FASHION GAME — STYLE SYSTEM ===== */
 :root {

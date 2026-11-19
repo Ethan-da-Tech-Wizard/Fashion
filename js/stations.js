@@ -1,10 +1,11 @@
 // ==============================================================================
 // Program: stations.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
-// Purpose: Interactive workstation coordinator for salon, wardrobe, runway, and studio.
-//          Handles tab transitions, camera focus shifts, tool enablement,
-//          and active workstation state management.
+// Last Modified: November 19, 2026
+// Purpose: Interactive multi-step Fashion Studio wizard and Closet wardrobe manager.
+//          Orchestrates step progression (Garment Type selection, Fabric texture pattern
+//          generation, Shears cutting contours, Embellishment toolbars, and Final preview),
+//          exporting composite canvas data URLs to persistent player wardrobe inventory.
 // ==============================================================================
 /* ===== FASHION STUDIO STATION ===== */
 const Stations = {
@@ -15,6 +16,10 @@ const Stations = {
   fabricColor: '#ff69b4',
   decorCanvas: null,
 
+  /**
+   * Initializes the Fashion Studio workstation to a designated step index (0-4).
+   * @param {number} [step=0] - Initial step index.
+   */
   init(step) {
     this.currentStep = step || 0;
     this._resizeCanvas();

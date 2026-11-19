@@ -1,10 +1,12 @@
 <!-- ==============================================================================
   Program: index.html
   Programmer: Ethan-da-Tech-Wizard
-  Last Modified: November 18, 2026
-  Purpose: Main entry point and single-page interface for Fashion City browser game.
-           Defines layout structures for character avatar canvas, salon styling stations,
-           wardrobe inventory drawers, atmospheric weather effects, and interactive toolbars.
+  Last Modified: November 19, 2026
+  Purpose: Main entry point and single-page interface for the Fashion City game engine.
+           Provides semantic markup defining multi-station screens (Main Menu, Character
+           Creator, Workshop Hub, Fashion Studio, Salon, Makeup, Tech Workshop, Home Decor,
+           Book Shop, Closet, and Customer Queue), interactive modal dialogs (HSV Color Wheel,
+           Settings), and responsive HTML5 canvas elements for procedural rendering.
 ============================================================================== -->
 <!DOCTYPE html>
 <html lang="en">
@@ -13,16 +15,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fashion — Design & Style Game</title>
   <meta name="description" content="Create characters, design clothes, style hair, do makeup, and build your fashion empire!">
+  
+  <!-- Web typography font preloading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Full-screen atmospheric weather overlay canvas (rain drops, snow particles, solar flares) -->
   <canvas id="weather-canvas"></canvas>
 
+  <!-- Container for celebratory particle emitters (confetti, sparkles, level-up stars) -->
   <div id="particles-container"></div>
 
-  <!-- ===== MAIN MENU ===== -->
+  <!-- ===== 1. MAIN MENU SCREEN ===== -->
   <div id="menu-screen" class="screen active">
     <div class="menu-container">
       <h1 class="game-title shimmer-text">Fashion</h1>
@@ -35,7 +41,7 @@
     </div>
   </div>
 
-  <!-- ===== CHARACTER CREATOR ===== -->
+  <!-- ===== 2. CHARACTER CREATOR SCREEN ===== -->
   <div id="character-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('menu')">← Back</button>
@@ -43,6 +49,7 @@
       <button class="btn btn-primary" onclick="Game.finishCharacter()">Done ✓</button>
     </div>
     <div class="creator-layout">
+      <!-- Options sidebar for facial attributes, hair styles, skin tones, and eyes -->
       <div class="creator-panel" id="creator-options">
         <div class="panel-section">
           <h3>Face Shape</h3>
@@ -73,11 +80,12 @@
           <button class="btn btn-accent btn-sm" onclick="Character.mystery()"><span data-icon="mystery"></span> Mystery</button>
         </div>
       </div>
+      <!-- 2D Canvas rendering procedural vector avatar -->
       <canvas id="character-canvas" width="400" height="600"></canvas>
     </div>
   </div>
 
-  <!-- ===== WORKSHOP HUB ===== -->
+  <!-- ===== 3. WORKSHOP HUB SCREEN ===== -->
   <div id="workshop-screen" class="screen">
     <div class="screen-header">
       <div class="header-left">
@@ -93,6 +101,7 @@
         <button class="btn btn-icon" onclick="Game.goTo('customers')" title="Customers" data-icon="shopping"></button>
       </div>
     </div>
+    <!-- Interactive station selector grid -->
     <div class="workshop-grid">
       <button class="workshop-card" onclick="Game.goTo('studio')" id="card-studio">
         <span class="card-icon" data-icon="dress"></span><span class="card-label">Fashion Studio</span>
@@ -127,16 +136,18 @@
         <span data-icon="edit"></span> Edit Character
       </button>
     </div>
+    <!-- Live character avatar preview in workshop -->
     <div class="workshop-character-preview">
       <canvas id="workshop-char-canvas" width="200" height="300"></canvas>
     </div>
   </div>
 
-  <!-- ===== FASHION STUDIO ===== -->
+  <!-- ===== 4. FASHION STUDIO SCREEN ===== -->
   <div id="studio-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
       <h2 id="studio-title">Fashion Studio</h2>
+      <!-- Multistep wizard navigation bar -->
       <div class="studio-steps" id="studio-steps">
         <span class="step active" data-step="type">Type</span>
         <span class="step" data-step="fabric">Fabric</span>
@@ -156,7 +167,7 @@
     </div>
   </div>
 
-  <!-- ===== HAIR SALON ===== -->
+  <!-- ===== 5. HAIR SALON SCREEN ===== -->
   <div id="salon-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
@@ -170,7 +181,7 @@
     </div>
   </div>
 
-  <!-- ===== MAKEUP STUDIO ===== -->
+  <!-- ===== 6. MAKEUP STUDIO SCREEN ===== -->
   <div id="makeup-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
@@ -184,7 +195,7 @@
     </div>
   </div>
 
-  <!-- ===== TECH WORKSHOP ===== -->
+  <!-- ===== 7. TECH WORKSHOP SCREEN ===== -->
   <div id="tech-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
@@ -198,7 +209,7 @@
     </div>
   </div>
 
-  <!-- ===== HOME DECOR ===== -->
+  <!-- ===== 8. HOME DECOR SCREEN ===== -->
   <div id="decor-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
@@ -212,7 +223,7 @@
     </div>
   </div>
 
-  <!-- ===== BOOK SHOP ===== -->
+  <!-- ===== 9. BOOK SHOP SCREEN ===== -->
   <div id="books-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
@@ -226,7 +237,7 @@
     </div>
   </div>
 
-  <!-- ===== CLOSET ===== -->
+  <!-- ===== 10. CLOSET SCREEN ===== -->
   <div id="closet-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
@@ -244,7 +255,7 @@
     <div class="closet-grid" id="closet-grid"></div>
   </div>
 
-  <!-- ===== CUSTOMERS ===== -->
+  <!-- ===== 11. CUSTOMERS SCREEN ===== -->
   <div id="customers-screen" class="screen">
     <div class="screen-header">
       <button class="btn btn-back" onclick="Game.goTo('workshop')">← Back</button>
@@ -259,7 +270,7 @@
     </div>
   </div>
 
-  <!-- ===== LEVEL UP ===== -->
+  <!-- ===== 12. LEVEL UP OVERLAY SCREEN ===== -->
   <div id="levelup-screen" class="screen">
     <div class="levelup-container">
       <div class="levelup-stars">⭐✨⭐</div>
@@ -270,7 +281,7 @@
     </div>
   </div>
 
-  <!-- ===== COLOR WHEEL MODAL ===== -->
+  <!-- ===== 13. COLOR WHEEL MODAL ===== -->
   <div id="colorwheel-modal" class="modal">
     <div class="modal-content colorwheel-content">
       <div class="modal-header">
@@ -278,6 +289,7 @@
         <button class="btn btn-icon" onclick="ColorWheel.close()">✕</button>
       </div>
       <div class="cw-layout">
+        <!-- Circular 2D color picker canvas -->
         <canvas id="cw-canvas" width="280" height="280"></canvas>
         <div class="cw-controls">
           <label>Brightness</label>
@@ -294,7 +306,7 @@
     </div>
   </div>
 
-  <!-- ===== SETTINGS MODAL ===== -->
+  <!-- ===== 14. SETTINGS MODAL ===== -->
   <div id="settings-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -321,6 +333,7 @@
     </div>
   </div>
 
+  <!-- Modular script architecture loaded in strict topological dependency order -->
   <script src="js/utils.js"></script>
   <script src="js/icons.js"></script>
   <script src="js/sound.js"></script>
@@ -336,7 +349,7 @@
   <script src="js/books.js"></script>
   <script src="js/game.js"></script>
   <script>
-    // Initialize custom icons when DOM loads
+    // Initialize custom vector SVG icons once DOM parsing completes
     document.addEventListener('DOMContentLoaded', () => {
       if(window.Icons) Icons.init();
     });

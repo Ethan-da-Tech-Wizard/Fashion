@@ -1,14 +1,15 @@
 // ==============================================================================
 // Program: makeup.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
+// Last Modified: November 19, 2026
 // Purpose: Facial beauty salon and cosmetics simulation module.
-//          Manages lipstick, eyeliner, blush, eye shadow, and face gem rendering
-//          with adjustable opacity, blending modes, and color swatches.
+//          Renders high-detail facial canvas features, manages alpha-blended cosmetic
+//          layers (blush gradients, eye shadow shading, lip tints, winged eyeliner,
+//          volumetric eyelashes, and cheekbone highlights), and persists cosmetic styles.
 // ==============================================================================
-/* ===== MAKEUP STUDIO ===== */
+/* ===== MAKEUP STUDIO WORKSTATION ===== */
 const Makeup = {
-  // Current makeup state
+  // Current makeup layer state parameters
   blushColor: '#FFB6C1',
   blushOpacity: 0,
   shadowColor: '#9370DB',
@@ -20,9 +21,12 @@ const Makeup = {
   lashesOn: false,
   highlightOn: false,
 
-  // Custom makeup palette
+  // Custom makeup palette array
   customPalette: [],
 
+  /**
+   * Initializes Makeup Studio canvas dimensions, resets layers, and renders face portrait.
+   */
   init() {
     const c = document.getElementById('makeup-canvas');
     if (!c) return;

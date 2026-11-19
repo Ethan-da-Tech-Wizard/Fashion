@@ -1,19 +1,30 @@
 // ==============================================================================
 // Program: icons.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
-// Purpose: Vector icon dictionary and SVG generator for game controls.
-//          Supplies scalable icon graphics for salon tools, clothing types,
-//          sound toggles, navigation tabs, and inventory filters.
+// Last Modified: November 19, 2026
+// Purpose: Vector SVG icon dictionary and declarative DOM icon hydration engine.
+//          Maintains scalable 24x24 path definitions for salon shears, cosmetic
+//          applicators, garment silhouettes, weather toggles, and navigation glyphs,
+//          providing runtime HTML generation with customizable viewBox dimensions.
 // ==============================================================================
+
 const Icons = {
+  /**
+   * Generates an inline SVG markup string for a specified icon identifier.
+   *
+   * @param {string} id - Icon path identifier key.
+   * @param {number} [size=24] - Rendered width and height in pixels.
+   * @param {string} [classes=''] - Optional CSS class names to append.
+   * @returns {string} Well-formed SVG element markup.
+   */
   get(id, size = 24, classes = '') {
-    const p = this.paths[id] || this.paths['star']; // fallback
+    const p = this.paths[id] || this.paths['star']; // Fallback to star icon on unknown identifier
     return `<svg class="fashion-icon ${classes}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   },
 
+  // Scalable vector 24x24 path definitions organized by functional category
   paths: {
-    /* GUI & Nav */
+    /* GUI & Navigation glyphs */
     'back': '<path d="M19 12H5M12 19l-7-7 7-7"/>',
     'check': '<path d="M20 6L9 17l-5-5"/>',
     'gear': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
@@ -25,7 +36,7 @@ const Icons = {
     'shopping': '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
     'edit': '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
     
-    /* Stations & Categories */
+    /* Stations & Activity Categories */
     'dress': '<path d="M6 3h12l1 5-3 2c0 2-4 2-4 2s-4 0-4-2l-3-2 1-5z"/><path d="M5 10l-2 11h18l-2-11"/>',
     'salon': '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>',
     'makeup': '<path d="M7 13h10V22H7z"/><path d="M9 13V5c0-1.657 1.343-3 3-3s3 1.343 3 3v8H9z"/>',
@@ -33,13 +44,13 @@ const Icons = {
     'decor': '<path d="M3 13V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M2 13h20v6H2z"/><path d="M5 19v2M19 19v2"/>',
     'books': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
     
-    /* Clothing Items */
+    /* Clothing Silhouettes */
     'pants': '<path d="M6 3h12l1 18-3-1-4-8-4 8-3 1z"/>',
     'shorts': '<path d="M6 3h12l1 10-4-1-3-4-3 4-4 1z"/>',
     'shoes': '<path d="M4 14v-2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/><path d="M2 18h20v2H2z"/><path d="M2 18s0-4 4-4"/><path d="M22 18s0-4-4-4"/>',
     'headband': '<path d="M4 12v-2a8 8 0 0 1 16 0v2"/><circle cx="12" cy="4" r="2"/>',
     
-    /* Tools */
+    /* Studio Crafting Tools */
     'scissors': '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>',
     'palette': '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.5 2 12 2z"/>',
     'brush': '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>',
@@ -55,10 +66,13 @@ const Icons = {
     'wand': '<path d="M2 2l12 12"/><path d="M17 5L5 17l2 2 12-12-2-2z"/><path d="M22 2l-2 2M22 6l-2-2M18 2l2 2"/>',
     'fabric': '<path d="M6 3h12v18H6z"/><line x1="6" y1="7" x2="18" y2="7"/><line x1="6" y1="17" x2="18" y2="17"/>',
     'square': '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>',
-    'spray': '<path d="M3 13V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M2 13h20v6H2z"/><path d="M5 19v2M19 19v2"/>', // spray needs better icon, maybe same as brush?
+    'spray': '<path d="M3 13V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M2 13h20v6H2z"/><path d="M5 19v2M19 19v2"/>',
     'face': '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'
   },
   
+  /**
+   * Scans DOM for elements with 'data-icon' attributes and injects the corresponding SVG markup.
+   */
   init() {
     document.querySelectorAll('[data-icon]').forEach(el => {
       const id = el.getAttribute('data-icon');

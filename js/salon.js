@@ -1,12 +1,13 @@
 // ==============================================================================
 // Program: salon.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
-// Purpose: Hair styling and beauty treatment workstation logic.
-//          Controls haircutting mechanics, blowdrying effects, hair coloring,
-//          accessory placement, and styling transformations.
+// Last Modified: November 19, 2026
+// Purpose: Hair styling, cutting, dyeing, highlights, and tinsel workstation engine.
+//          Renders close-up avatar bust portraits, manages tool states (shears, dyes,
+//          highlighter streaks, metallic tinsel fibers, and floral accessories),
+//          and persists newly sculpted hairstyles back to player profile state.
 // ==============================================================================
-/* ===== HAIR SALON ===== */
+/* ===== HAIR SALON WORKSTATION ===== */
 const Salon = {
   hairColor: '#3d2b1f',
   hairStyle: 'long',
@@ -14,6 +15,9 @@ const Salon = {
   tinselOn: false,
   _baseImage: null,
 
+  /**
+   * Initializes Hair Salon canvas dimensions, synchronizes player hair model, and builds toolbars.
+   */
   init() {
     const c = document.getElementById('salon-canvas');
     if (!c) return;

@@ -1,17 +1,21 @@
 // ==============================================================================
 // Program: tech.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
-// Purpose: In-game smartphone, camera photography, and social feed simulator.
-//          Allows players to capture in-game polaroids, apply photo filters,
-//          and view mock social media engagement metrics.
+// Last Modified: November 19, 2026
+// Purpose: Tech gadget design workshop and accessory customization engine.
+//          Renders procedural vector device models (Smartphones, Tablets, AirPods)
+//          with customizable casing chassis, screen wallpapers, metallic antenna bands,
+//          camera bumps, spray-paint layers, and sticker embellishments.
 // ==============================================================================
-/* ===== TECH WORKSHOP ===== */
+/* ===== TECH WORKSHOP WORKSTATION ===== */
 const Tech = {
   deviceType: null,
   deviceColor: '#1a1a2e',
   screenColor: '#111827',
 
+  /**
+   * Initializes Tech Workshop canvas geometry, resets active gadget model, and loads tools.
+   */
   init() {
     const c = document.getElementById('tech-canvas');
     if (!c) return;

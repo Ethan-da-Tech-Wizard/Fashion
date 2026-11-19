@@ -1,13 +1,16 @@
 // ==============================================================================
 // Program: game.js
 // Programmer: Ethan-da-Tech-Wizard
-// Last Modified: November 18, 2026
-// Purpose: Central game loop, event dispatcher, and scene coordinator.
-//          Coordinates station switching, user input events, animation frames,
-//          progression milestones, and local storage state persistence.
+// Last Modified: November 19, 2026
+// Purpose: Central game loop, scene coordinator, economy system, and progression engine.
+//          Orchestrates screen transitions across 10 specialized design stations,
+//          manages player leveling thresholds (XP, unlocks), currency transactions,
+//          NPC customer generation with randomized fashion demands, confetti particle bursts,
+//          and localStorage state persistence.
 // ==============================================================================
 /* ===== MAIN GAME ENGINE ===== */
 const Game = {
+  // Global player progress and economy state
   state: {
     level: 1,
     xp: 0,
@@ -21,6 +24,9 @@ const Game = {
 
   currentScreen: 'menu',
 
+  /**
+   * Bootstraps core subsystems, binds AudioContext listeners, and restores saved state.
+   */
   init() {
     // Init audio context on first user interaction
     document.addEventListener('click', () => {
