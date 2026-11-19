@@ -42,8 +42,8 @@
 //   - (Fixed) _updateCardLocks used to replace a locked card's onclick with an error-sound handler and never
 //     restore it, so a station that unlocked in the same page session stayed dead until reload. The original
 //     handler is now stashed on the card (card._origOnclick) and put back on unlock.
-//   - checkLevelUp() raises the level by at most one per call even if the XP would pass two
-//     thresholds.
+//   - (Fixed) checkLevelUp() used to raise the level by at most one per call even if the XP passed two
+//     thresholds; it now loops until the next threshold is out of reach.
 //   - (Fixed) The saved soundOn flag was never applied to Sound.enabled at start-up; init() now copies it
 //     into Sound.enabled and the settings checkbox (see sound.js).
 //   - startFreestyle() declares `bonusXP` but never awards it.
@@ -322,18 +322,26 @@ const Game = {
     Sound.play('coin');
   },
 
-  // Looks up the next level's entry in LEVEL_DATA and, if the player has reached its XP threshold, raises the level
-  // by one and saves. Returns true when a level was gained (the caller then shows the level-up screen). Only one
-  // level per call, so a very large XP jump would need repeated calls.
+  // Looks up the next level's entry in LEVEL_DATA and, while the player has reached its XP threshold, raises the level
+  // and saves. Returns true when at least one level was gained (the caller then shows the level-up screen, which
+  // displays the final level). Loops so a big XP jump (for example several sales) cannot leave the player a level behind.
   // @returns {boolean} True if the level increased.
   checkLevelUp() {
-    const nextLevel = LEVEL_DATA.find(l => l.lvl === this.state.level + 1);
-    if (nextLevel && this.state.xp >= nextLevel.xp) {
+    let gained = false;
+
+    // Re-evaluate the NEXT level after every increase: XP thresholds in LEVEL_DATA are cumulative, so one XP total
+    // can clear several of them. The loop ends when the next entry is missing (max level) or still out of reach,
+    // so it cannot spin forever even with a huge XP value.
+    for (;;) {
+      const nextLevel = LEVEL_DATA.find(l => l.lvl === this.state.level + 1);
+      if (!nextLevel || this.state.xp < nextLevel.xp) break;
       this.state.level++;
-      this.save();
-      return true;
+      gained = true;
     }
-    return false;
+
+    // Save once after all increases rather than per level.
+    if (gained) this.save();
+    return gained;
   },
 
   // Adds coins (the currency) to the balance, refreshes the display and saves.
