@@ -56,6 +56,7 @@ const Decor = {
    * Initializes Home Decor canvas, resets textile attributes, and populates tools.
    */
   init() {
+    // Looked up by id on each call because Tools.setup() can replace the canvas element with a clone.
     const c = document.getElementById('decor-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -78,6 +79,8 @@ const Decor = {
   _buildTools() {
     const tools = document.getElementById('decor-tools');
     if (!tools) return;
+
+    // Clear first: init() runs on every visit and must not stack duplicate buttons.
     tools.innerHTML = '';
 
     // Each entry: id (passed to _buildSidePanel), icon (a key in Icons.paths) and label.
@@ -96,6 +99,8 @@ const Decor = {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
+
+      // Icon above its label (.tool-btn defaults to a row).
       btn.style.flexDirection = 'column';
       btn.title = t.label;
 
@@ -115,12 +120,16 @@ const Decor = {
   _buildSidePanel(toolId) {
     const side = document.getElementById('decor-side');
     if (!side) return;
+
+    // Discard the previous tool's panel before building the new one.
     side.innerHTML = '';
 
     switch(toolId) {
       case 'pick': this._buildPickPanel(side); break;
       case 'fabric': this._buildFabricPanel(side); break;
       case 'pattern': this._buildPatternPanel(side); break;
+
+      // The 'dye' tool is the shared round brush; the panel builder only creates the colour and size controls, and the two assignments afterwards give Tools the tool and attach it to the canvas.
       case 'dye': this._buildPaintPanel(side); Tools.currentTool = 'dye'; Tools.setup('decor-canvas'); break;
       case 'sticker': this._buildStickerPanel(side); break;
       case 'glitter': this._buildGlitterPanel(side); break;
@@ -128,6 +137,8 @@ const Decor = {
 
       // Eraser: the shared eraser with a 15 px radius, plus a button that redraws the item from its settings, which removes everything painted on top.
       case 'eraser':
+
+        // Eraser size 15 px radius (30 px wide).
         Tools.currentTool = 'eraser'; Tools.brushSize = 15; Tools.setup('decor-canvas');
         const h4 = document.createElement('h4'); h4.textContent = 'Eraser'; side.appendChild(h4);
         const p = document.createElement('p');
@@ -151,8 +162,11 @@ const Decor = {
     h4.textContent = 'Choose Item';
     side.appendChild(h4);
 
+    // .item-grid fits as many 48 px cells as the panel allows.
     const grid = document.createElement('div');
     grid.className = 'item-grid';
+
+      // One cell per decor type; the current type is highlighted.
       DECOR_TYPES.forEach(d => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.decorType === d.id ? ' active' : '');
@@ -172,6 +186,7 @@ const Decor = {
 
     // Until an item is chosen, show a hint on the cleared canvas.
     if (!this.decorType) {
+      // Placeholder hint drawn directly because no item exists yet (so _drawDecorItem would return early).
       const c = document.getElementById('decor-canvas');
       const ctx = c.getContext('2d');
       ctx.clearRect(0, 0, c.width, c.height);
@@ -202,6 +217,7 @@ const Decor = {
     };
     side.appendChild(colorBtn);
 
+    // Sixteen fabric colours: vivid first (purple, pink, gold, blue, green, coral, turquoise) then soft neutrals and pastels (cream, tan, pink, lavender, khaki, powder blue, terracotta, lemon, white).
     const colors = ['#9370DB','#FF69B4','#FFD700','#1E90FF','#2E8B57','#FF6347','#00CED1',
       '#F5F5DC','#DEB887','#FFC0CB','#E6E6FA','#F0E68C','#B0E0E6','#D2691E','#FFFACD','#F5F5F5'];
     const qg = document.createElement('div');
@@ -224,6 +240,7 @@ const Decor = {
     h4.textContent = 'Pattern';
     side.appendChild(h4);
 
+    // Pattern ids must match the cases in _drawPattern; 'solid' has no case, which means no overlay is drawn.
     const patterns = [
       { id: 'solid', name: 'Solid' },
       { id: 'stripes', name: 'Stripes' },
@@ -240,6 +257,8 @@ const Decor = {
     patterns.forEach(p => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.patternType === p.id ? ' active' : '');
+
+      // Pattern cells show text names, which need a smaller font than the emoji cells.
       cell.style.fontSize = '11px';
       cell.textContent = p.name;
       cell.onclick = () => {
@@ -268,6 +287,7 @@ const Decor = {
     colorBtn.onclick = () => { Tools.openColorPicker(hex => { colorBtn.style.background = hex; }); };
     side.appendChild(colorBtn);
 
+    // Same 12 quick colours as the other stations' paint panels.
     const quickColors = ['#FF69B4','#FF6347','#FFD700','#32CD32','#1E90FF','#9370DB','#FF1493','#00CED1','#FFA500','#FFFFFF','#000000','#8B0000'];
     const qGrid = document.createElement('div');
     qGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;';
@@ -284,6 +304,8 @@ const Decor = {
     slbl.textContent = 'Size'; slbl.style.marginTop = '10px';
     side.appendChild(slbl);
     const slider = document.createElement('input');
+
+    // Size slider 2-30 px bound directly to Tools.brushSize.
     slider.type = 'range'; slider.min = '2'; slider.max = '30'; slider.value = Tools.brushSize;
     slider.style.cssText = 'width:100%;accent-color:var(--accent-pink);';
     slider.oninput = () => { Tools.brushSize = parseInt(slider.value); };
@@ -298,6 +320,7 @@ const Decor = {
     h4.textContent = 'Stickers';
     side.appendChild(h4);
 
+    // Twenty emoji suited to home decor: flowers, butterfly, pets, rainbow, cloud, clover, star, gem, heart, bow, moon, flame, snowflake, strawberry, cupcake, bouquet.
     const decorStickers = ['🌸','🌺','🌹','🌻','🦋','🐱','🐶','🌈','☁️','🍀',
       '⭐','💎','❤️','🎀','🌙','🔥','❄️','🍓','🧁','💐'];
     const grid = document.createElement('div');
@@ -316,6 +339,8 @@ const Decor = {
     });
     side.appendChild(grid);
     Tools.currentTool = 'sticker';
+
+    // Brush size 8 gives 24 px stickers.
     Tools.brushSize = 8;
     Tools.setup('decor-canvas');
   },
@@ -338,6 +363,7 @@ const Decor = {
     h4.textContent = 'Extra Details';
     side.appendChild(h4);
 
+    // Toggle button: label and style come from `this.tassels` when built and are refreshed on every click.
     // Tassels toggle
     const tasselBtn = document.createElement('button');
     tasselBtn.className = 'btn ' + (this.tassels ? 'btn-primary' : 'btn-ghost');
@@ -352,6 +378,7 @@ const Decor = {
     };
     side.appendChild(tasselBtn);
 
+    // Same pattern for fringe.
     // Fringe toggle
     const fringeBtn = document.createElement('button');
     fringeBtn.className = 'btn ' + (this.fringe ? 'btn-primary' : 'btn-ghost');
@@ -366,6 +393,7 @@ const Decor = {
     };
     side.appendChild(fringeBtn);
 
+    // Not a toggle: pressing it paints pearls onto the canvas once (pressing again paints a second ring on top).
     // Pearl border
     const pearlBtn = document.createElement('button');
     pearlBtn.className = 'btn btn-ghost';
@@ -385,9 +413,13 @@ const Decor = {
     if (!c || !this.decorType) return;
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
+
+    // Repaint from scratch: removes earlier paint, stickers and pearls.
     ctx.clearRect(0, 0, w, h);
 
     const cx = w/2, cy = h/2;
+
+    // The size record for the chosen type; an unknown id draws nothing.
     const d = DECOR_TYPES.find(t => t.id === this.decorType);
     if (!d) return;
 
@@ -403,6 +435,8 @@ const Decor = {
     // The rectangle is twice the item's size, centred on it, so it always covers the whole outline.
     // Base color
     ctx.fillStyle = this.baseColor;
+
+    // Oversized fill; the clip trims it to the item's outline.
     ctx.fillRect(cx - dw, cy - dh, dw*2, dh*2);
 
     // Pattern colours derived from the base: a darker tone (18 lightness points down) and a lighter tone (15 up).
@@ -410,6 +444,8 @@ const Decor = {
     const [ph, ps, pl] = U.hexToHsl(this.baseColor);
     const patDark = U.hslToHex(ph, ps, Math.max(0, pl - 18));
     const patLight = U.hslToHex(ph, ps, Math.min(100, pl + 15));
+
+    // The pattern tiles over the same oversized rectangle, again trimmed by the clip.
     this._drawPattern(ctx, cx - dw, cy - dh, dw*2, dh*2, patDark, patLight);
 
     // Remove the clip so the outline, tassels and fringe (which stick out of the shape) can be drawn.
@@ -422,6 +458,7 @@ const Decor = {
     ctx.stroke();
 
     // Extras
+    // Extras are drawn after the clip is removed because they extend past the outline.
     if (this.tassels) this._drawTassels(ctx, cx, cy, dw, dh);
     if (this.fringe) this._drawFringe(ctx, cx, cy, dw, dh);
 
@@ -429,6 +466,8 @@ const Decor = {
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.08)';
     ctx.beginPath();
+
+    // Floor shadow: a flat ellipse 15 px below the item's bottom edge, 60% of its width.
     ctx.ellipse(cx, cy + dh/2 + 15, dw*0.6, 8, 0, 0, Math.PI*2);
     ctx.fill();
 
@@ -452,6 +491,7 @@ const Decor = {
       // Blanket: a rectangle with 12 px rounded corners (four arcTo calls).
       case 'blanket':
         // Soft rectangle with slightly rounded corners
+        // Blanket corner radius in pixels.
         const br = 12;
         ctx.moveTo(cx - w/2 + br, cy - h/2);
         ctx.arcTo(cx + w/2, cy - h/2, cx + w/2, cy + h/2, br);
@@ -464,6 +504,7 @@ const Decor = {
       // Pillow: four quadratic curves that bulge slightly outside the rectangle by 10 px, which gives a puffy cushion shape.
       case 'pillow':
         // Puffy shape
+        // Pillow outline: starts near the top-left corner and curves through four control points that push 10 px outside the box on each side, giving the puffy sides.
         ctx.moveTo(cx - w/2 + 15, cy - h/2 + 5);
         ctx.quadraticCurveTo(cx, cy - h/2 - 10, cx + w/2 - 15, cy - h/2 + 5);
         ctx.quadraticCurveTo(cx + w/2 + 10, cy, cx + w/2 - 15, cy + h/2 - 5);
@@ -475,6 +516,7 @@ const Decor = {
       // Rug: an ellipse.
       case 'rug':
         // Oval
+        // Rug: an ellipse with the item's width and height as its diameters.
         ctx.ellipse(cx, cy, w/2, h/2, 0, 0, Math.PI*2);
         break;
     }
@@ -490,6 +532,7 @@ const Decor = {
   // @param {string} dark - Darker tone of the base colour, for lines and dots.
   // @param {string} light - Lighter tone, for flowers and stars.
   _drawPattern(ctx, x, y, w, h, dark, light) {
+    // Dark tone for lines and dots; patterns that use the light tone set it themselves.
     ctx.fillStyle = dark;
     ctx.strokeStyle = dark;
 
@@ -497,6 +540,8 @@ const Decor = {
       // Diagonal stripes 8 px wide every 24 px, each running at 45 degrees (the line from (dx, 0) goes to (dx + h, h)).
       case 'stripes':
         ctx.lineWidth = 8;
+
+        // Start at -h so the 45-degree lines also cover the lower-left corner; the loop runs to w + h for the same reason on the right.
         for (let dx = -h; dx < w + h; dx += 24) {
           ctx.beginPath(); ctx.moveTo(x + dx, y); ctx.lineTo(x + dx + h, y + h); ctx.stroke();
         }
@@ -505,6 +550,7 @@ const Decor = {
       // Dots of radius 5 every 28 px; every second row is shifted 14 px.
       case 'polka':
         for (let dy = 0; dy < h; dy += 28) {
+          // Every other row (period 56 px) starts 14 px in, so dots form a staggered grid.
           for (let dx = (dy % 56 < 28 ? 0 : 14); dx < w; dx += 28) {
             ctx.beginPath(); ctx.arc(x + dx, y + dy, 5, 0, Math.PI*2); ctx.fill();
           }
@@ -540,6 +586,8 @@ const Decor = {
         for (let dy = 0; dy < h; dy += 30) {
           for (let dx = (dy % 60 < 30 ? 0 : 15); dx < w; dx += 30) {
             ctx.fillStyle = dark;
+
+            // Rotate a square 45 degrees about its centre to make a diamond; save/restore keep the rotation local.
             ctx.save(); ctx.translate(x + dx, y + dy); ctx.rotate(Math.PI/4);
             ctx.fillRect(-6, -6, 12, 12);
             ctx.restore();
@@ -592,6 +640,7 @@ const Decor = {
       ctx.strokeStyle = this.baseColor;
       ctx.lineWidth = 2;
       for (let i = 0; i < 6; i++) {
+        // Strand angle between 45 and 135 degrees from the horizontal, i.e. pointing downward and outward.
         const angle = Math.random() * Math.PI * 0.5 + Math.PI*0.25;
         ctx.beginPath();
         ctx.moveTo(tx, ty);
@@ -599,6 +648,7 @@ const Decor = {
         ctx.stroke();
       }
       // Knot
+      // Knot colour: the base colour 15 lightness points darker.
       const [bh,bs,bl] = U.hexToHsl(this.baseColor);
       ctx.fillStyle = U.hslToHex(bh, bs, Math.max(0, bl - 15));
       ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI*2); ctx.fill();
@@ -615,6 +665,8 @@ const Decor = {
     const [bh,bs,bl] = U.hexToHsl(this.baseColor);
     ctx.strokeStyle = U.hslToHex(bh, bs, Math.max(0, bl - 10));
     ctx.lineWidth = 1.5;
+
+    // Fringe hangs from the item's bottom edge.
     const bottom = cy + h/2;
     for (let x = cx - w/2 + 5; x < cx + w/2; x += 6) {
       ctx.beginPath();
@@ -637,6 +689,7 @@ const Decor = {
 
     const w = d.w, h = d.h;
 
+    // Pearl radius in pixels.
     // Pearl radius in pixels.
     const pearlSize = 4;
 
@@ -689,6 +742,7 @@ const Decor = {
       });
     }
 
+    // Reward feedback: jingle plus 45 XP.
     Sound.play('complete');
     Game.addXP(45);
     Game.save();
