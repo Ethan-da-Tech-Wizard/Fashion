@@ -155,6 +155,9 @@ tests.css = async p => {
       titleAnim: getComputedStyle(document.querySelector('.shimmer-text') || document.body).animationName };
   })()`);
   assert(r.shimmerCount === 1, '@keyframes shimmer defined ' + r.shimmerCount + ' times');
+  // Chrome reports the shorthand as longhands (background-position-x/-y), so match by prefix.
+  assert(r.dance.some(n => n.startsWith('background-position')), 'border-dance should animate background-position: ' + r.dance);
+  
   assert(!r.dance.includes('stroke-dashoffset'), 'border-dance still animates stroke-dashoffset: ' + r.dance);
 };
 
