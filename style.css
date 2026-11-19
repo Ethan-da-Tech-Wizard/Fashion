@@ -7,35 +7,106 @@
             aesthetic styling, animated weather overlays, responsive avatar rendering,
             glassmorphism surfaces, and customizable color palettes.
    ============================================================================== */
+/*
+ * FILE OVERVIEW
+ * style.css is the only stylesheet. It is loaded by index.html after the Google Fonts link and styles every
+ * screen, modal and control in the game. There is no preprocessor; the file is organised in sections, each
+ * introduced by a banner comment, in roughly this order: design tokens, base reset, screens, buttons, menu, header,
+ * character creator, workshop, studio layout, closet, customers, level-up, modals, colour wheel, settings,
+ * responsive rules, and then a long run of "enhancement" sections added later that extend or override earlier rules.
+ *
+ * How the page is structured visually (see the matching comments in index.html):
+ *   - Layer 0 (behind everything): #weather-canvas and #particles-container, both fixed and click-through.
+ *   - Layer 1: the .screen elements. Only .screen.active is shown (display:flex); all others are display:none.
+ *   - Layer 5: .screen-header, so scrolling panels slide under the top bar.
+ *   - Layer 100: .modal (colour wheel, settings). Layer 200: #confetti-canvas. The popup created by
+ *     Game._showToast sets its own z-index of 10000 inline.
+ *
+ * State classes toggled by JavaScript (search for these when changing behaviour):
+ *   .active (screens, modals, tool buttons, tabs, option buttons, wizard steps), .done (finished wizard steps),
+ *   .locked (workshop cards the player cannot use yet).
+ *
+ * Design decisions:
+ *   - All colours, radii, fonts and the standard transition are CSS custom properties on :root, so the theme can be
+ *     changed in one place.
+ *   - "Glass" surfaces: translucent white backgrounds with backdrop-filter blur, over a dark purple background.
+ *   - The page never scrolls (body overflow hidden); each panel that can overflow scrolls on its own.
+ *
+ * Known limits / things to watch:
+ *   - Several rules are defined twice and the later one wins: .screen animation (fadeIn, then screenEnter near the end);
+ *     @keyframes shimmer (a transform version near line 793 and a background-position version near the end, so the
+ *     later one replaces the earlier for both users); .workshop-card and .workshop-card::before (see the notes there).
+ *   - Some colours are literal values rather than variables (for example #1a1630 for the modal background).
+ *   - The only breakpoint is max-width 900px, so small phones and very tall layouts are not specifically tuned.
+ * How to test: open index.html and walk through every screen; or change a custom property such as --accent-pink in the
+ * browser's dev tools and watch the whole UI recolour.
+ */
 /* ===== FASHION GAME — STYLE SYSTEM ===== */
+/*
+ * Design tokens: every colour, radius, font and the shared transition used by the rules below. Change them here to retheme the game.
+ * The comments on the colours are the original intent of the palette (a "magic purple" night theme).
+ */
 :root {
   --bg-dark: #120b29; /* Magic purple space */
+  /*
+   * Surfaces are translucent white at different strengths (6% for cards, 10% for glass panels, 18% on hover) over the dark background; borders are 20% white.
+   */
   --bg-card: rgba(255,255,255,0.06);
   --bg-glass: rgba(255,255,255,0.1);
   --bg-glass-hover: rgba(255,255,255,0.18);
   --border-glass: rgba(255,255,255,0.2);
+
+  /*
+   * Text colours: white for main text, pale lavender for secondary text, and muted purple-grey for hints and labels.
+   */
   --text-primary: #ffffff;
   --text-secondary: #ebd9ff;
   --text-muted: #a491c7;
+
+  /*
+   * Accent colours (pink, purple, gold, teal, coral) used for highlights, borders and gradients.
+   */
   --accent-pink: #ff4db8;  /* Bubblegum Pink */
   --accent-purple: #c86bfa; /* Magic Purple */
   --accent-gold: #ffeb3b;  /* Sparkle Gold */
   --accent-teal: #00f0ff;  /* Electric Teal */
   --accent-coral: #ff577f; /* Electric Coral */
+  /*
+   * Three gradients: main (pink -> purple -> teal), warm (pink -> gold) and cool (purple -> teal), all at 135 degrees, used for buttons, titles and badges.
+   */
   --gradient-main: linear-gradient(135deg, #ff4db8 0%, #c86bfa 50%, #00f0ff 100%);
   --gradient-warm: linear-gradient(135deg, #ff4db8 0%, #ffeb3b 100%);
   --gradient-cool: linear-gradient(135deg, #c86bfa 0%, #00f0ff 100%);
+
+  /*
+   * Shadows: a purple glow for hover states and a deep drop shadow for cards and modals.
+   */
   --shadow-glow: 0 0 40px rgba(200,107,250,0.5);
   --shadow-card: 0 10px 40px rgba(0,0,0,0.5);
+
+  /*
+   * Corner radii from small (buttons, cells) to extra large (modals).
+   */
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 36px;
+
+  /*
+   * Fonts: Fredoka for headings and buttons, Outfit for body text, each with a generic fallback in case the web fonts do not load.
+   */
   --font-display: 'Fredoka', sans-serif;
   --font-body: 'Outfit', sans-serif;
+
+  /*
+   * The standard animation curve (0.25 s on a cubic-bezier(.4, 0, .2, 1) curve) used by hover effects on almost every control.
+   */
   --transition: .25s cubic-bezier(.4,0,.2,1);
 }
 
+/*
+ * Icon helpers: .fashion-icon is the class Icons.get() puts on every SVG; the other two add spacing when an icon sits next to text (menu buttons and coin badges).
+ */
 /* ===== ICONS ===== */
 .fashion-icon {
   display: inline-block;
@@ -50,8 +121,14 @@
   vertical-align: text-bottom;
 }
 
+/*
+ * Global reset: border-box sizing everywhere (so width includes padding) and no default margins or padding, so spacing is defined only by the rules in this file.
+ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/*
+ * The page is exactly one viewport and never scrolls (overflow hidden); screens are fixed to the viewport and scroll internally where needed.
+ */
 body {
   font-family: var(--font-body);
   background: var(--bg-dark);
@@ -61,11 +138,18 @@ body {
   width: 100vw;
 }
 
+/*
+ * Weather layer: full viewport, fixed, behind the screens (z-index 0) and click-through (pointer-events none). Its pixel size is set by weather.js.
+ */
 #weather-canvas {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   pointer-events: none; z-index: 0;
 }
 
+/*
+ * Screens: each is a fixed full-viewport flex column; hidden by default and shown only when Game.goTo() adds .active. z-index 1 places screens above the weather layer. The fade-in
+ * animation replays every time a screen is shown, because display:none -> flex restarts CSS animations.
+ */
 /* ===== SCREENS ===== */
 .screen {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -74,8 +158,15 @@ body {
 }
 .screen.active { display: flex; }
 
+/*
+ * fadeIn slides content up 10 px while fading in (also reused by the popup toast).
+ */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+/*
+ * Buttons: .btn is the shared base (rounded, bold display font, inline-flex so icons and text align). Variants follow: primary (gradient with a pulsing glow), secondary (glass),
+ * ghost (outline only), accent (small teal-purple), danger, icon (round 40 px), back, and the size modifiers btn-lg and btn-sm.
+ */
 /* ===== BUTTONS ===== */
 .btn {
   font-family: var(--font-display);
@@ -92,12 +183,20 @@ body {
   position: relative;
   overflow: hidden;
 }
+
+/*
+ * A white sheen overlay that fades in on hover. It is clipped by the button's overflow:hidden and does not intercept clicks because it is a pseudo-element.
+ */
 .btn::after {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
   opacity: 0; transition: var(--transition);
 }
 .btn:hover::after { opacity: 1; }
+
+/*
+ * Pressed feedback: the button shrinks slightly.
+ */
 .btn:active { transform: scale(0.96); }
 
 .btn-primary {
@@ -111,6 +210,9 @@ body {
   transform: translateY(-2px) scale(1.03); 
 }
 
+/*
+ * The primary button glow breathes between a 20 px and 30 px shadow (alternate direction, 2.5 s).
+ */
 @keyframes pulse-glow {
   0% { box-shadow: 0 4px 20px rgba(255,77,184,0.4); }
   100% { box-shadow: 0 4px 30px rgba(255,77,184,0.8); }
@@ -140,6 +242,9 @@ body {
 
 .btn-danger { background: #ff4060; color: #fff; }
 
+/*
+ * Round icon-only button; the title attribute on these buttons provides the tooltip.
+ */
 .btn-icon {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -165,6 +270,9 @@ body {
 .btn-lg { font-size: 18px; padding: 14px 36px; border-radius: var(--radius-lg); }
 .btn-sm { font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); }
 
+/*
+ * Main menu: a centred column over three soft radial colour glows (purple at the top, pink bottom-left, teal bottom-right).
+ */
 /* ===== MAIN MENU ===== */
 .menu-container {
   display: flex; flex-direction: column;
@@ -174,6 +282,11 @@ body {
               radial-gradient(ellipse at 20% 80%, rgba(255,110,180,0.1) 0%, transparent 50%),
               radial-gradient(ellipse at 80% 70%, rgba(62,219,213,0.1) 0%, transparent 50%);
 }
+
+/*
+ * Title text: the gradient is clipped to the glyph shapes (background-clip:text with a transparent text fill), and the drop-shadow filter pulses between pink and purple. The class shimmer-text
+ * (defined near the end of the file) replaces the background and animation.
+ */
 .game-title {
   font-family: var(--font-display);
   font-size: 72px;
@@ -198,9 +311,16 @@ body {
   text-transform: uppercase;
   margin-bottom: 30px;
 }
+
+/*
+ * Menu buttons: a fixed 260 px column; each button stretches to full width and centres its content.
+ */
 .menu-buttons { display: flex; flex-direction: column; gap: 14px; width: 260px; }
 .menu-buttons .btn { width: 100%; justify-content: center; }
 
+/*
+ * Top bar shared by all screens: three items spread across (back, title, action), glass background, bottom border, z-index 5 so panels scroll beneath it, and flex-shrink 0 so it never gets squeezed.
+ */
 /* ===== SCREEN HEADER ===== */
 .screen-header {
   display: flex;
@@ -221,7 +341,15 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/*
+ * Groups of controls at the left and right of the workshop header.
+ */
 .header-left, .header-right { display: flex; align-items: center; gap: 10px; }
+
+/*
+ * Level, XP and coin read-outs in the headers (their text is written by Game._updateHUD).
+ */
 .level-badge {
   background: var(--gradient-warm);
   color: #fff;
@@ -238,6 +366,9 @@ body {
   color: var(--accent-gold);
 }
 
+/*
+ * Character creator: a flex row with the options panel (fixed 320 px, scrolls vertically with a thin purple scrollbar) and the avatar canvas filling the rest.
+ */
 /* ===== CHARACTER CREATOR ===== */
 .creator-layout {
   flex: 1;
@@ -258,6 +389,9 @@ body {
 .creator-panel::-webkit-scrollbar { width: 4px; }
 .creator-panel::-webkit-scrollbar-thumb { background: var(--accent-purple); border-radius: 4px; }
 
+/*
+ * One glass card per option group in the left panel (face shape, hair style, ...).
+ */
 .panel-section {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -271,6 +405,10 @@ body {
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
+
+/*
+ * Rows of choice buttons wrap onto new lines; the scrollable variant (hair styles) stays on one line and scrolls sideways because there are twelve choices.
+ */
 .option-row {
   display: flex;
   gap: 8px;
@@ -278,6 +416,9 @@ body {
 }
 .option-row.scrollable { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
 
+/*
+ * Square 44 px choice button holding a mini canvas drawing; the .active class (set by character.js) adds a pink border and glow. flex-shrink 0 keeps the size in the scrolling row.
+ */
 .opt-btn {
   width: 44px; height: 44px;
   border-radius: var(--radius-sm);
@@ -295,6 +436,9 @@ body {
 .opt-btn:hover { border-color: var(--accent-pink); transform: scale(1.08); }
 .opt-btn.active { border-color: var(--accent-pink); box-shadow: 0 0 12px rgba(255,110,180,0.4); background: rgba(255,110,180,0.15); }
 
+/*
+ * Round 44 px colour swatch that opens the colour wheel; its background colour is set inline by JavaScript. Also used by every station for colour buttons. The CSS background is only a pink fallback.
+ */
 .color-pick-btn {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -305,6 +449,9 @@ body {
 }
 .color-pick-btn:hover { transform: scale(1.1); border-color: #fff; }
 
+/*
+ * The avatar canvas grows to fill the remaining width (up to 500 px). Its drawing buffer stays 400x600; CSS only scales it.
+ */
 #character-canvas {
   flex: 1;
   max-width: 500px;
@@ -313,6 +460,9 @@ body {
   border: 1px solid var(--border-glass);
 }
 
+/*
+ * Workshop hub: a three-column grid of station cards (two columns under 900 px), centred and capped at 900 px wide.
+ */
 /* ===== WORKSHOP ===== */
 .workshop-grid {
   flex: 1;
@@ -324,6 +474,10 @@ body {
   margin: 0 auto;
   align-content: center;
 }
+
+/*
+ * Station cards are <button>s styled as glass tiles; the base rule is extended further down the file (position, hover lift, dashed border).
+ */
 .workshop-card {
   background: var(--bg-glass);
   border: 1px solid var(--border-glass);
@@ -353,13 +507,24 @@ body {
   font-weight: 600;
 }
 .workshop-card .card-desc { font-size: 12px; color: var(--text-muted); }
+
+/*
+ * Locked state (added by Game._updateCardLocks): dimmed and unclickable (pointer-events none also stops the hover effects).
+ */
 .workshop-card.locked { opacity: 0.4; pointer-events: none; }
+
+/*
+ * A lock emoji is added after the content. It is absolutely positioned inside the card (the card gets position: relative later in the file).
+ */
 .workshop-card.locked::after {
   content: '🔒';
   position: absolute;
   font-size: 28px;
 }
 
+/*
+ * The small avatar preview is fixed to the bottom-right corner above the screens' background (z-index 2).
+ */
 .workshop-character-preview {
   position: fixed;
   bottom: 10px;
@@ -368,12 +533,19 @@ body {
 }
 
 /* ===== STUDIO LAYOUT ===== */
+/*
+ * Station workbench shared by all six stations: a horizontal flex row (tool column, canvas, side panel) that fills the height left under the header. overflow hidden keeps the three columns inside the screen.
+ */
 .studio-layout {
   flex: 1;
   display: flex;
   gap: 0;
   overflow: hidden;
 }
+
+/*
+ * Left tool column: 70 px wide, glass, vertical stack of 52 px tool buttons, scrolls if there are many. Its 70 px plus the side panel's 220 px is the 290 px that the station scripts subtract from the width when they size the canvas.
+ */
 .tool-panel {
   width: 70px;
   background: var(--bg-glass);
@@ -386,6 +558,10 @@ body {
   overflow-y: auto;
   backdrop-filter: blur(12px);
 }
+
+/*
+ * Tool button: a 52 px square with the icon and a tiny label; .active shows the selected tool. flex-shrink 0 stops the buttons squashing when the column is short.
+ */
 .tool-btn {
   width: 52px; height: 52px;
   border-radius: var(--radius-sm);
@@ -409,12 +585,18 @@ body {
   color: var(--text-muted);
 }
 
+/*
+ * The station canvas stretches to fill the middle (flex: 1) with a slightly dark background and a crosshair cursor (it is the drawing surface).
+ */
 .studio-layout canvas {
   flex: 1;
   background: rgba(0,0,0,0.2);
   cursor: crosshair;
 }
 
+/*
+ * Right column for tool options: 220 px wide, scrolls vertically, children spaced 10 px.
+ */
 .side-panel {
   width: 220px;
   background: var(--bg-glass);
@@ -432,6 +614,9 @@ body {
   color: var(--text-secondary);
 }
 
+/*
+ * Fashion Studio footer holding the Prev and Next buttons (the other stations have no footer).
+ */
 .studio-footer {
   display: flex;
   justify-content: space-between;
@@ -441,6 +626,9 @@ body {
   backdrop-filter: blur(12px);
 }
 
+/*
+ * Wizard progress pills in the Fashion Studio header: grey by default, pink for the current step (.active) and teal for finished steps (.done), set by Stations._renderStep().
+ */
 /* ===== STUDIO STEPS ===== */
 .studio-steps { display: flex; gap: 4px; }
 .step {
@@ -455,6 +643,9 @@ body {
 .step.active { background: var(--accent-pink); color: #fff; }
 .step.done { background: rgba(62,219,213,0.25); color: var(--accent-teal); }
 
+/*
+ * Picker grid used by every station: as many 48 px-or-wider square cells as fit the panel width (auto-fill, minmax). aspect-ratio 1 keeps cells square.
+ */
 /* ===== ITEM GRID (used in tools, pickers) ===== */
 .item-grid {
   display: grid;
@@ -476,6 +667,9 @@ body {
 .item-cell:hover { border-color: var(--accent-pink); transform: scale(1.08); }
 .item-cell.active { border-color: var(--accent-pink); box-shadow: 0 0 10px rgba(255,110,180,0.4); }
 
+/*
+ * Closet screen: filter tabs in the header (the active tab is purple) and a scrollable grid of cards at least 140 px wide.
+ */
 /* ===== CLOSET ===== */
 .closet-tabs { display: flex; gap: 4px; }
 .tab {
@@ -492,6 +686,9 @@ body {
 .tab:hover { color: var(--text-primary); }
 .tab.active { background: var(--accent-purple); color: #fff; border-color: var(--accent-purple); }
 
+/*
+ * The grid scrolls on its own (overflow-y auto) and packs items to the top (align-content start).
+ */
 .closet-grid {
   flex: 1;
   display: grid;
@@ -515,6 +712,9 @@ body {
 .closet-item canvas { width: 100%; border-radius: var(--radius-sm); }
 .closet-item .item-name { font-size: 12px; margin-top: 6px; color: var(--text-secondary); }
 
+/*
+ * Customers screen: a fixed 200 px scrolling queue on the left, a flexible detail pane on the right.
+ */
 /* ===== CUSTOMERS ===== */
 .customers-layout {
   flex: 1;
@@ -545,6 +745,9 @@ body {
 .customer-card .cust-name { font-size: 13px; font-family: var(--font-display); margin-top: 4px; }
 .customer-card .cust-wants { font-size: 11px; color: var(--text-muted); }
 
+/*
+ * Detail pane: content centred in both directions, used for both the empty message and the sale view.
+ */
 .customer-detail {
   flex: 1;
   background: var(--bg-glass);
@@ -559,6 +762,9 @@ body {
 }
 .empty-msg { color: var(--text-muted); font-size: 16px; text-align: center; }
 
+/*
+ * Level-up screen: everything centred, a soft gold glow behind, spinning stars, a gradient title, and the list of unlocked features.
+ */
 /* ===== LEVEL UP ===== */
 .levelup-container {
   display: flex;
@@ -592,6 +798,10 @@ body {
   max-width: 500px;
   margin: 16px 0;
 }
+
+/*
+ * Each unlock pops in (scale from 0, "backwards" fill so it is invisible before its delay); the delay is set inline by Game._renderLevelUp and also by the nth-child rules near the end.
+ */
 .unlock-badge {
   background: var(--bg-glass);
   border: 1px solid var(--accent-gold);
@@ -603,6 +813,9 @@ body {
 }
 @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
+/*
+ * Modals: a fixed full-screen dark backdrop with blur, hidden until .active is added; the dialog box is centred and animates in with the popIn keyframes.
+ */
 /* ===== MODALS ===== */
 .modal {
   position: fixed;
@@ -637,6 +850,9 @@ body {
   color: var(--text-primary);
 }
 
+/*
+ * Colour wheel dialog: the 280 px canvas (clipped to a circle) on the left and the controls column on the right; under 900 px they stack.
+ */
 /* ===== COLOR WHEEL ===== */
 .colorwheel-content { max-width: 560px; }
 .cw-layout { display: flex; gap: 20px; align-items: flex-start; }
@@ -677,6 +893,10 @@ body {
   gap: 4px;
   flex-wrap: wrap;
 }
+
+/*
+ * Small 24 px colour swatch used by the wheel's recent and preset rows and by many station panels.
+ */
 .cw-recent-swatch {
   width: 24px; height: 24px;
   border-radius: 4px;
@@ -687,6 +907,9 @@ body {
 .cw-recent-swatch:hover { transform: scale(1.15); }
 .cw-presets { display: flex; gap: 4px; flex-wrap: wrap; }
 
+/*
+ * Settings dialog: rows with a label on the left and a control on the right, separated by thin borders.
+ */
 /* ===== SETTINGS ===== */
 .settings-list { display: flex; flex-direction: column; gap: 14px; }
 .setting-row {
@@ -706,6 +929,9 @@ body {
   font-family: var(--font-body);
 }
 
+/*
+ * Toggle switch: the real checkbox is hidden (opacity 0) and a styled .slider span draws the track; the knob (::before) moves 22 px right when the checkbox is checked (the adjacent-sibling rule `input:checked + .slider`).
+ */
 /* Toggle switch */
 .toggle { position: relative; width: 48px; height: 26px; display: inline-block; }
 .toggle input { opacity: 0; width: 0; height: 0; }
@@ -729,17 +955,26 @@ body {
 .toggle input:checked + .slider { background: var(--accent-pink); border-color: var(--accent-pink); }
 .toggle input:checked + .slider::before { transform: translateX(22px); background: #fff; }
 
+/*
+ * Thin translucent purple scrollbars (WebKit and Blink browsers; Firefox uses the scrollbar-width rule on .tool-panel).
+ */
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(179,107,255,0.3); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(179,107,255,0.5); }
 
+/*
+ * Confetti layer created by Game.init(): fixed, covers the viewport, above modals (z-index 200) and click-through.
+ */
 /* ===== CONFETTI CANVAS ===== */
 #confetti-canvas {
   position: fixed; inset: 0; pointer-events: none; z-index: 200;
 }
 
+/*
+ * The only breakpoint (width 900 px or less): two-column workshop grid, stacked character creator (options above the avatar, panel capped at 200 px tall) and a stacked colour wheel.
+ */
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
   .workshop-grid { grid-template-columns: repeat(2, 1fr); }
@@ -748,6 +983,11 @@ body {
   .cw-layout { flex-direction: column; align-items: center; }
 }
 
+/*
+ * Everything from here to the end of the file is later additions that refine earlier rules (it relies on source order: for equal specificity the later rule wins).
+ *
+ * Coin badge in the workshop header with a slow golden glow pulse.
+ */
 /* ===== COINS BADGE ===== */
 .coins-badge {
   font-family: var(--font-display);
@@ -764,6 +1004,9 @@ body {
   50% { box-shadow: 0 0 14px rgba(255,215,0,0.2); }
 }
 
+/*
+ * Row under the station grid holding the Freestyle and Edit Character buttons.
+ */
 /* ===== WORKSHOP BOTTOM ===== */
 .workshop-bottom {
   display: flex;
@@ -772,6 +1015,11 @@ body {
   gap: 14px;
   padding: 8px 24px 0;
 }
+
+/*
+ * The freestyle button overrides several .btn properties with !important so its size and shape win over .btn-accent. It has a pulsing glow and a diagonal light streak (::before, 200% size,
+ * sliding across with the "shimmer" keyframes; see the note on duplicate shimmer keyframes in the file overview).
+ */
 .freestyle-btn {
   font-size: 16px !important;
   padding: 12px 28px !important;
@@ -790,6 +1038,9 @@ body {
   background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%);
   animation: shimmer 3s ease-in-out infinite;
 }
+
+/*
+ */
 @keyframes shimmer {
   0% { transform: translateX(-100%) rotate(25deg); }
   100% { transform: translateX(100%) rotate(25deg); }
@@ -799,6 +1050,10 @@ body {
   50% { box-shadow: 0 4px 25px rgba(62,219,213,0.4), 0 0 35px rgba(179,107,255,0.2); }
 }
 
+/*
+ * Workshop cards (second block): position relative so the lock icon and the ::before overlay can be positioned inside the card, overflow hidden to clip them, a radial highlight that fades in on hover, and an icon that bounces on hover.
+ * (Note: a later block defines the same ::before pseudo-element again; the two merge, see the note there.)
+ */
 /* ===== WORKSHOP CARD ENHANCED ===== */
 .workshop-card {
   position: relative;
@@ -828,6 +1083,9 @@ body {
   100% { transform: scale(1.15) rotate(-5deg); }
 }
 
+/*
+ * Customer cards slide up when the queue is built; the nth-child delays (0.05 s each) stagger the first eight (the queue never has more). The mini character canvas uses pixelated scaling and bounces on hover.
+ */
 /* ===== CUSTOMER CARD ENHANCED ===== */
 .customer-card {
   animation: slideUp 0.4s ease backwards;
@@ -858,11 +1116,17 @@ body {
   100% { transform: scale(1.03); }
 }
 
+/*
+ * Closet cards pop in when the grid is rebuilt.
+ */
 /* ===== CLOSET ITEM ENHANCED ===== */
 .closet-item {
   animation: popIn 0.3s ease backwards;
 }
 
+/*
+ * Soft colour glow layer behind the level-up content (z-index -1 so it stays behind the text); it slowly scales and fades. Despite the section name it is not the confetti (that is drawn on a canvas by game.js).
+ */
 /* ===== LEVEL UP CONFETTI ===== */
 .levelup-container::before {
   content: '';
@@ -880,6 +1144,9 @@ body {
   100% { transform: scale(1.1); opacity: 1; }
 }
 
+/*
+ * Thin themed scrollbar for the tool column and a hover/active glow behind each tool button (the ::before layer sits behind it with z-index -1 and is only visible, at 20% opacity, when the button is active).
+ */
 /* ===== TOOL PANEL POLISH ===== */
 .tool-panel {
   scrollbar-width: thin;
@@ -902,6 +1169,9 @@ body {
   opacity: 0.2;
 }
 
+/*
+ * Side panel headings get a thin gradient bar on the left.
+ */
 /* ===== SIDE PANEL POLISH ===== */
 .side-panel h4 {
   position: relative;
@@ -918,6 +1188,9 @@ body {
   background: var(--gradient-main);
 }
 
+/*
+ * Second .screen animation: this overrides the earlier fadeIn animation (same property, later in the file), so screens enter with a slight scale-up as well as sliding up.
+ */
 /* ===== SCREEN TRANSITIONS ===== */
 .screen {
   animation: screenEnter 0.35s ease;
@@ -927,6 +1200,9 @@ body {
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/*
+ * toastPop is defined but not referenced by any rule in this file; Game._showToast uses fadeIn and popIn instead.
+ */
 /* ===== TOAST ANIMATIONS ===== */
 @keyframes toastPop {
   from { transform: scale(0.8); opacity: 0; }
@@ -934,6 +1210,9 @@ body {
   to { transform: scale(1); opacity: 1; }
 }
 
+/*
+ * Delays for the first five level-up unlock badges, 0.1 s apart. (Game._renderLevelUp also sets an inline delay of 0.15 s per badge, and an inline style beats these rules.)
+ */
 /* ===== UNLOCK BADGE STAGGER ===== */
 .unlock-badge:nth-child(1) { animation-delay: 0.1s; }
 .unlock-badge:nth-child(2) { animation-delay: 0.2s; }
@@ -941,11 +1220,17 @@ body {
 .unlock-badge:nth-child(4) { animation-delay: 0.4s; }
 .unlock-badge:nth-child(5) { animation-delay: 0.5s; }
 
+/*
+ * Menu buttons slide up one after another (0.1, 0.2, 0.3 s). Setting `animation` here overrides the earlier pulse animation on .btn-primary for the first button.
+ */
 /* ===== MENU BUTTON STAGGER ===== */
 .menu-buttons .btn:nth-child(1) { animation: slideUp 0.4s ease backwards; animation-delay: 0.1s; }
 .menu-buttons .btn:nth-child(2) { animation: slideUp 0.4s ease backwards; animation-delay: 0.2s; }
 .menu-buttons .btn:nth-child(3) { animation: slideUp 0.4s ease backwards; animation-delay: 0.3s; }
 
+/*
+ * Subtle pill background behind the XP text (the name suggests a progress bar but there is no bar).
+ */
 /* ===== XP BAR BEHIND LEVEL ===== */
 .xp-text {
   position: relative;
@@ -954,6 +1239,10 @@ body {
   background: rgba(255,255,255,0.04);
 }
 
+/*
+ * Floating particles: the container is a fixed, click-through, clipped, full-viewport layer at z-index 0; each .particle is an emoji that float-up moves from 100 px below its start to a full viewport height above while fading in
+ * and out and spinning. Per-particle left position, size, duration and delay are set inline by Game._initParticles().
+ */
 /* ===== PARTICLES (Sparkles & Hearts) ===== */
 #particles-container {
   position: fixed;
@@ -973,6 +1262,9 @@ body {
   opacity: 0;
 }
 
+/*
+ * Keyframe stops: 0% invisible and small, 10% visible, 90% still visible, 100% faded out, so particles never pop in or out abruptly.
+ */
 @keyframes float-up {
   0% { transform: translateY(100px) scale(0.5) rotate(0deg); opacity: 0; }
   10% { opacity: 0.8; }
@@ -980,6 +1272,9 @@ body {
   100% { transform: translateY(-100vh) scale(1.5) rotate(360deg); opacity: 0; }
 }
 
+/*
+ * Tool buttons wobble slightly on hover (scale 1.08, rotate -3 degrees) with a springy cubic-bezier curve (the overshoot values above 1 give a bounce), and shrink on press.
+ */
 /* ===== TOOL HOVER MICRO-INTERACTIONS ===== */
 .tool-btn {
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s, box-shadow 0.2s;
@@ -994,6 +1289,10 @@ body {
   transform: scale(0.95);
 }
 
+/*
+ * Title shimmer: a pink-white-teal gradient twice as wide as the text slides across it (background-position animates to 200%). This keyframes block redefines `shimmer` and therefore also replaces the
+ * transform-based version used by .freestyle-btn::before, whose streak will no longer slide.
+ */
 /* ===== SHIMMER EFFECT FOR TITLE ===== */
 .shimmer-text {
   background: linear-gradient(to right, var(--accent-pink) 20%, #ffffff 40%, #ffffff 60%, var(--accent-teal) 80%);
@@ -1011,6 +1310,11 @@ body {
   }
 }
 
+/*
+ * Workshop card hover lift (8 px up, 2% bigger) with a springy curve, and a dashed inner border that turns pink on hover. This block defines .workshop-card::before a second time. The two rules merge (properties are only overridden when repeated):
+ * the radial highlight background and `opacity: 0` from the earlier rule are kept and the dashed border is added, so the dashed border is
+ * invisible until the hover rule sets opacity to 1.
+ */
 /* ===== WORKSHOP CARD DECORATIVE BORDERS ===== */
 .workshop-card {
   position: relative;
@@ -1034,6 +1338,9 @@ body {
   animation: border-dance 4s linear infinite;
 }
 
+/*
+ * Intended to animate the dashed border, but stroke-dashoffset only affects SVG strokes, not CSS borders, so this animation has no visible effect.
+ */
 @keyframes border-dance {
   to { stroke-dashoffset: 20; }
 }
