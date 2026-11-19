@@ -39,9 +39,9 @@
 //     step]. setup() now keeps the element, so drawing before or after it both persist.
 //   - The saved image is whatever is on the canvas at save time, not a re-render of the
 //     garment, so the picture depends on the previous step's drawing.
-//   - Closet.filterTab() decides which tab is highlighted by comparing the button's text to the
-//     filter name, but the tab buttons contain only an SVG icon (no text), so only "All" ever
-//     shows as selected.
+//   - (Fixed) Closet.filterTab() used to pick the highlighted tab by comparing the button's text to the
+//     filter name, but the tab buttons hold only an SVG icon (no text), so only "All" ever showed as selected;
+//     it now compares each tab's data-filter attribute.
 /* ===== FASHION STUDIO STATION ===== */
 // Fashion Studio controller (singleton).
 const Stations = {
@@ -849,9 +849,10 @@ const Closet = {
   filterTab(tab) {
     this.currentFilter = tab;
     document.querySelectorAll('.closet-tabs .tab').forEach(t => {
-      // Highlight logic: it compares the button's text to the filter name, which works for the "All" tab
-      // only because the other tabs show an icon and contain no text.
-      t.classList.toggle('active', t.textContent.trim() === tab || (tab === 'all' && t.textContent.includes('All')));
+      // Highlight the tab whose data-filter (set in index.html) equals the chosen filter. The old test compared
+      // the button's text, which only worked for the "All" tab because the others hold just an SVG icon and so
+      // never matched. toggle(name, force) also removes the class from every non-matching tab.
+      t.classList.toggle('active', t.dataset.filter === tab);
     });
     this.render();
     Sound.play('click');

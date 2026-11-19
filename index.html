@@ -467,16 +467,18 @@
       <!--
         Category filter tabs. Closet.filterTab(type) stores the filter and re-renders; the
         filter value must equal an item's `type` field ('clothes', 'hair', ...). The tabs
-        use icons instead of text so their meaning comes from the data-icon art.
+        use icons instead of text so their meaning comes from the data-icon art. Each tab also carries
+        data-filter="<same value>", which Closet.filterTab() compares to decide which tab gets the "active"
+        class (the tabs hold only an SVG, so their text cannot be used for that).
       -->
       <div class="closet-tabs">
-        <button class="tab active" onclick="Closet.filterTab('all')">All</button>
-        <button class="tab" onclick="Closet.filterTab('clothes')" data-icon="dress"></button>
-        <button class="tab" onclick="Closet.filterTab('hair')" data-icon="salon"></button>
-        <button class="tab" onclick="Closet.filterTab('makeup')" data-icon="makeup"></button>
-        <button class="tab" onclick="Closet.filterTab('tech')" data-icon="tech"></button>
-        <button class="tab" onclick="Closet.filterTab('decor')" data-icon="decor"></button>
-        <button class="tab" onclick="Closet.filterTab('books')" data-icon="books"></button>
+        <button class="tab active" data-filter="all" onclick="Closet.filterTab('all')">All</button>
+        <button class="tab" data-filter="clothes" onclick="Closet.filterTab('clothes')" data-icon="dress"></button>
+        <button class="tab" data-filter="hair" onclick="Closet.filterTab('hair')" data-icon="salon"></button>
+        <button class="tab" data-filter="makeup" onclick="Closet.filterTab('makeup')" data-icon="makeup"></button>
+        <button class="tab" data-filter="tech" onclick="Closet.filterTab('tech')" data-icon="tech"></button>
+        <button class="tab" data-filter="decor" onclick="Closet.filterTab('decor')" data-icon="decor"></button>
+        <button class="tab" data-filter="books" onclick="Closet.filterTab('books')" data-icon="books"></button>
       </div>
     </div>
 
