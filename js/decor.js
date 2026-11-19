@@ -28,8 +28,8 @@
 // Known limits / things to watch:
 //   - (Fixed) Tools.setup() used to swap the canvas for a blank clone, so choosing a painting tool blanked
 //     the item; it now re-binds listeners on the same canvas element and the pixels persist.
-//   - Icons.get() is called with 'blanket', 'pillow' and 'rug', which icons.js does not define, so the
-//     picker shows the fallback star icon.
+//   - (Fixed) Icons.get() is called with 'blanket', 'pillow' and 'rug'; icons.js now defines them (they used to
+//     show the fallback star).
 //   - Tassels and fringe use Math.random on every redraw, so they look slightly different each time.
 //   - finish() awards 45 XP even if no item was chosen (nothing is added to the closet then).
 // How to test: Game.goTo('decor'); Decor.decorType = 'rug'; Decor.patternType = 'stars'; Decor._drawDecorItem().
@@ -171,7 +171,7 @@ const Decor = {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.decorType === d.id ? ' active' : '');
 
-      // Icon plus name. The icon id equals the item id, which icons.js does not define, so the fallback star shows.
+      // Icon plus name. The icon id equals the item id ('blanket', 'pillow', 'rug'), which icons.js now defines.
       cell.innerHTML = `<div style="text-align:center"><div>${Icons.get(d.id, 24)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${d.name}</div></div>`;
       cell.onclick = () => {
         this.decorType = d.id;

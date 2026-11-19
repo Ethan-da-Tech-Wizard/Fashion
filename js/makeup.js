@@ -28,8 +28,7 @@
 // toggle, using the shared helpers _makeColorBtn, _makeSwatchGrid and _makeSlider at the end.
 //
 // Known limits / things to watch:
-//   - The 'Lips' tool asks Icons for an icon named 'lipstick', which does not exist in icons.js, so
-//     Icons.get() shows its fallback star icon instead.
+//   - (Fixed) The 'Lips' tool asks Icons for 'lipstick'; icons.js now defines it (it used to show the fallback star).
 //   - (Fixed) Choosing 'Paint' calls Tools.setup(), which used to swap the canvas for a blank clone (the face
 //     disappeared until _drawFace() ran again); it now keeps the element, so the face stays.
 //   - Opacity 0 means "not applied": the face shows natural blush and natural lips in that case.
@@ -100,7 +99,7 @@ const Makeup = {
     // Clear the column first: init() runs on every visit and must not stack duplicate buttons.
     tools.innerHTML = '';
 
-    // Each entry: id (used by _onToolChange), icon (a key in Icons.paths; 'lipstick' is missing, see the file overview) and
+    // Each entry: id (used by _onToolChange), icon (a key in Icons.paths; 'lipstick' was added to fix the missing-icon bug) and
     // the label under the icon.
     const toolList = [
       { id: 'blush', icon: 'face', label: 'Blush' },

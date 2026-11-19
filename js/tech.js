@@ -26,8 +26,8 @@
 // Known limits / things to watch:
 //   - (Fixed) Tools.setup() used to swap the canvas for a blank clone, so choosing a painting tool could make
 //     the device disappear; the canvas is now kept. The device still cannot be recoloured without losing the decoration.
-//   - Icons.get() is called with the ids 'phone', 'tablet' and 'airpods', none of which exist in icons.js,
-//     so the device picker shows the fallback star icon.
+//   - (Fixed) Icons.get() is called with 'phone', 'tablet' and 'airpods'; icons.js now defines them (the picker
+//     used to show the fallback star).
 //   - finish() awards 50 XP even when no device was chosen (nothing is added to the closet then).
 // How to test: Game.goTo('tech'); Tech.deviceType = 'phone'; Tech._drawDevice() in the console.
 // ==============================================================================
@@ -129,7 +129,7 @@ const Tech = {
         // The current device is highlighted when the panel is built.
         cell.className = 'item-cell' + (this.deviceType === d.id ? ' active' : '');
 
-        // Icon plus name (the icon id equals the device id, which icons.js does not define, so the fallback star shows).
+        // Icon plus name (the icon id equals the device id: 'phone', 'tablet', 'airpods', defined in icons.js).
         cell.innerHTML = `<div style="text-align:center"><div>${Icons.get(d.id, 26)}</div><div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${d.name}</div></div>`;
         cell.onclick = () => {
           this.deviceType = d.id;

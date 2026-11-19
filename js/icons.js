@@ -30,8 +30,9 @@
 // `if(window.Icons) Icons.init()` in index.html was always false and init() never ran; 0 of the 22 data-icon
 // placeholders were filled. The guard is now `typeof Icons !== 'undefined'` (regression test: tests/regression_chrome.test.js, "icons").
 // Icons.get() always worked (it is called directly by the stations).
-// Known limits: several names that modules request are not defined here and therefore show the fallback star:
-// 'lipstick' (makeup.js), 'phone', 'tablet', 'airpods' (tech.js), and 'blanket', 'pillow', 'rug' (decor.js).
+// Fixed: 'lipstick' (makeup.js), 'phone', 'tablet', 'airpods' (tech.js) and 'blanket', 'pillow', 'rug' (decor.js) used
+// to be missing and showed the fallback star; they are now defined at the end of the path table.
+// Known limits: any other unknown name still shows the fallback star.
 // How to test: in the console run document.body.insertAdjacentHTML('beforeend', Icons.get('gear', 48)) and
 // look for a gear at the bottom of the page.
 // ==============================================================================
@@ -104,7 +105,25 @@ const Icons = {
     'fabric': '<path d="M6 3h12v18H6z"/><line x1="6" y1="7" x2="18" y2="7"/><line x1="6" y1="17" x2="18" y2="17"/>',
     'square': '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>',
     'spray': '<path d="M3 13V9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4"/><path d="M2 13h20v6H2z"/><path d="M5 19v2M19 19v2"/>',
-    'face': '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'
+    'face': '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+
+    // Icons added to fix the "fallback star" bug: names that makeup.js, tech.js and decor.js ask for but the table
+    // used to lack. Same rules as every icon here: 24x24 box, no fill (get() sets stroke/width/caps), simple shapes.
+    /* Makeup / Tech / Decor item icons */
+    // Lipstick: a tube body, the raised bullet above it, and a slanted tip.
+    'lipstick': '<rect x="7" y="14" width="10" height="8" rx="1"/><path d="M9 14V9h6v5"/><path d="M9 9l6-5v5"/>',
+    // Phone: taller and narrower than the 'tech' station glyph, with a speaker slot so the two read as different.
+    'phone': '<rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="5" x2="14" y2="5"/><line x1="12" y1="19" x2="12.01" y2="19"/>',
+    // Tablet: landscape rectangle with a home dot, so it is distinguishable from the phone at 24px.
+    'tablet': '<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="19" y1="12" x2="19.01" y2="12"/>',
+    // Earbuds: a pair of round buds with stems hanging down (mirror images).
+    'airpods': '<circle cx="7" cy="7" r="3.5"/><path d="M10.5 7v11a1.75 1.75 0 0 1-3.5 0"/><circle cx="17" cy="7" r="3.5"/><path d="M13.5 7v11a1.75 1.75 0 0 0 3.5 0"/>',
+    // Blanket: a rectangle crossed by two bands each way, like a plaid throw.
+    'blanket': '<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 10h18M3 14h18M8 5v14M16 5v14"/>',
+    // Pillow: a plump rectangle with pinched corners.
+    'pillow': '<path d="M4 7c5-2 11-2 16 0 1 3 1 7 0 10-5 2-11 2-16 0-1-3-1-7 0-10z"/><path d="M4 7l2 2M20 7l-2 2M4 17l2-2M20 17l-2-2"/>',
+    // Rug: a rectangle with an inner border and fringe tassels at both short ends.
+    'rug': '<rect x="3" y="7" width="18" height="10" rx="1"/><rect x="6" y="10" width="12" height="4"/><path d="M3 9H1M3 12H1M3 15H1M21 9h2M21 12h2M21 15h2"/>'
   },
   
   /**
