@@ -6,42 +6,114 @@
 //          Orchestrates screen transitions across 10 specialized design stations,
 //          manages player leveling thresholds (XP, unlocks), currency transactions,
 //          NPC customer generation with randomized fashion demands, confetti particle bursts,
+// FILE OVERVIEW
+// game.js is the application's central controller. It holds the player's saved state, switches
+// between screens, runs the economy (XP, levels, coins), generates the customers that buy
+// closet items, shows the level-up celebration and the freestyle challenge, and loads/saves
+// progress to localStorage. Every other module reports back to it.
+//
+// Who calls it: index.html buttons call Game.* directly through onclick attributes (newGame,
+// continueGame, goTo, finishCharacter, showSettings, closeSettings, resetGame, startFreestyle).
+// Station modules call Game.addToCloset(), addXP(), checkLevelUp() and goTo() when an item is
+// finished. It starts itself: the DOMContentLoaded listener at the bottom of the file calls
+// Game.init(). It calls into every other module: Sound, ColorWheel, Weather, Character, Stations,
+// Salon, Makeup, Tech, Decor, Books, Closet, plus the utils (U) and the constant tables.
+//
+// Save-file shape (Game.state, stored as JSON under localStorage key "fashion_state", see
+// U.save in utils.js):
+//   level (1-10), xp (running total), coins, closet (array of item objects, see stations.js),
+//   character (Character.data copy or null), weather ('sunny'|'rainy'|'snowy'),
+//   soundOn (boolean), hasStarted (true once a game has been created; enables Continue).
+//
+// Screens: a screen is a <div id="NAME-screen" class="screen"> in index.html. goTo('NAME')
+// shows exactly one. The screen ids handled specially by goTo are character, workshop, studio,
+// salon, makeup, tech, decor, books, closet, customers and levelup (menu has no setup).
+//
+// Design decisions:
+//   - A single mutable `state` object with an explicit save() after each change; no framework,
+//     no events. Methods that change state call save() themselves, so callers do not have to.
+//   - Customers are generated on demand each time the customers screen opens and are not saved,
+//     which keeps the save file small and the screen lively but means a customer cannot be
+//     "kept waiting".
+//   - Level gating is done in two places (card locks in the workshop and the freestyle picker)
+//     rather than in each station.
+//
+// Known limits / things to watch (found while reading, not changed here):
+//   - _updateCardLocks assigns an onclick that plays the error sound to locked cards and never
+//     restores the original handler, so a station that unlocks during the same page session can
+//     keep playing the error sound until the page is reloaded. [inferred from the code]
+//   - checkLevelUp() raises the level by at most one per call even if the XP would pass two
+//     thresholds.
+//   - The saved soundOn flag is never applied to Sound.enabled at start-up (see sound.js).
+//   - startFreestyle() declares `bonusXP` but never awards it.
+// How to test: open the page, click New Game, then in the console run Game.addXP(300);
+// Game.checkLevelUp(); Game.goTo('workshop') and look at the badge (should show level 2 or 3).
 //          and localStorage state persistence.
 // ==============================================================================
 /* ===== MAIN GAME ENGINE ===== */
+// Singleton controller object; everything else in the game talks to this one global.
 const Game = {
   // Global player progress and economy state
+  // The persisted state (shape described in the file overview). These are the defaults for a fresh
+  // game; init() overlays any saved values on top.
   state: {
+    // Current level, 1 to 10 (see LEVEL_DATA in utils.js).
     level: 1,
+
+    // Total experience points earned so far (not reset on level-up; thresholds are cumulative).
     xp: 0,
+
+    // Currency earned by selling items to customers; shown in the workshop and customers screens.
     coins: 0,
+
+    // Finished items waiting to be sold or admired (objects built by each station).
     closet: [],
+
+    // Saved avatar appearance (a copy of Character.data) or null before the first character is created.
     character: null,
+
+    // Last weather preset chosen by the player.
     weather: 'sunny',
+
+    // Whether sound effects are enabled; written when settings close.
     soundOn: true,
+
+    // False on a brand-new browser profile; the Continue button is disabled until a game exists.
     hasStarted: false,
   },
 
+  // Name of the screen shown now (the part before "-screen" in its element id). Starts on the menu,
+  // matching the one screen that has class "active" in index.html.
   currentScreen: 'menu',
 
   /**
    * Bootstraps core subsystems, binds AudioContext listeners, and restores saved state.
    */
   init() {
+    // Browsers block audio until the user interacts with the page, so the AudioContext is created on the
+    // first click anywhere (`once: true` removes the listener after it fires).
     // Init audio context on first user interaction
     document.addEventListener('click', () => {
       if (!Sound.ctx) Sound.init();
     }, { once: true });
 
     // Init subsystems
+    // Start the subsystems that need the DOM and draw their first frame: the colour wheel canvas,
+    // the weather canvas and its animation loop, and the floating background particles.
     ColorWheel.init();
     Weather.init();
     this._initParticles();
 
     // Load saved state
+    // Restore progress. U.load returns null for a missing or unreadable save; otherwise the saved fields are
+    // merged over the defaults with the spread operator, so fields added in newer versions of the game get
+    // their default values instead of being undefined.
     const saved = U.load('state');
     if (saved) {
       this.state = { ...this.state, ...saved };
+
+      // Apply the saved weather and, if a character exists, give Character its saved appearance (it is
+      // the same object, not a copy, so later edits in the creator change the saved state directly).
       Weather.set(this.state.weather);
       if (this.state.character) {
         Character.data = this.state.character;
@@ -49,21 +121,28 @@ const Game = {
     }
 
     // Update UI
+    // Fill the level, XP and coin read-outs from the loaded state.
     this._updateHUD();
 
     // Check continue button
+    // Grey out and disable Continue when there is no saved game (opacity 0.4 and pointer-events none; there
+    // is no disabled attribute on that button).
     if (!this.state.hasStarted) {
       document.getElementById('btn-continue').style.opacity = '0.4';
       document.getElementById('btn-continue').style.pointerEvents = 'none';
     }
 
     // Add confetti canvas
+    // Create the full-window confetti canvas used by the level-up screen (it is not in index.html). The
+    // guard keeps this from creating a second canvas if init() ever runs twice.
     if (!document.getElementById('confetti-canvas')) {
       const cc = document.createElement('canvas');
       cc.id = 'confetti-canvas';
       document.body.appendChild(cc);
       cc.width = window.innerWidth;
       cc.height = window.innerHeight;
+
+      // Keep the canvas pixel size in step with the window so confetti covers the whole screen.
       window.addEventListener('resize', () => {
         cc.width = window.innerWidth;
         cc.height = window.innerHeight;
@@ -78,6 +157,9 @@ const Game = {
     const pContainer = document.getElementById('particles-container');
     if (!pContainer) return;
     const types = ['✨', '💖', '⭐', '🫧'];
+
+    // 35 floating emoji is a balance between a lively background and a smooth frame rate; they are
+    // ordinary DOM elements animated by CSS (.particle, keyframes float-up), not canvas drawings.
     const count = 35; // A good number of floating particles
 
     for (let i = 0; i < count; i++) {
@@ -85,11 +167,15 @@ const Game = {
       p.className = 'particle';
       p.textContent = U.pick(types);
       
+      // Per-particle randomness: size in rem, horizontal position in vw, animation duration 8-20 s and a
+      // negative delay of 0-15 s. A negative animation-delay starts the animation part-way through, so
+      // the particles are already spread over the screen when the page opens instead of all starting at the bottom.
       const size = U.randFloat(0.8, 1.8);
       const left = U.rand(0, 100);
       const duration = U.randFloat(8, 20);
       const delay = U.randFloat(0, 15);
       
+      // Inline style (rather than a CSS class) because every particle needs different values.
       p.style.cssText = `
         left: ${left}vw;
         font-size: ${size}rem;
@@ -103,17 +189,27 @@ const Game = {
 
   /* ===== NAVIGATION ===== */
   // Executes stateful scene transitions, updating DOM screen visibility and orchestrating subsystem focus
+  // Switches to the screen named `screen` and runs that screen's setup code.
+  // @param {string} screen - Screen name: 'menu', 'character', 'workshop', 'studio', 'salon', 'makeup',
+  //   'tech', 'decor', 'books', 'closet', 'customers' or 'levelup'.
   goTo(screen) {
     // Hide all screens
+    // Hide every screen first so only one is ever visible.
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
     // Show target
+    // Find the target by id convention. An unknown name does nothing (the old screen has already been
+    // hidden, so the page would go blank; callers only pass known names).
     const el = document.getElementById(screen + '-screen');
     if (el) {
       el.classList.add('active');
       this.currentScreen = screen;
 
       // Initialize screen-specific logic
+      // Per-screen entry hooks: the station modules rebuild their panels (their init() runs every time
+      // the screen opens, so state from a previous visit is reset or refreshed there), the workshop refreshes
+      // its read-outs and locks, the closet and customer screens rebuild their lists, and the level-up
+      // screen fills its text and starts the confetti.
       switch(screen) {
         case 'character':
           Character.init();
@@ -152,13 +248,19 @@ const Game = {
           break;
       }
 
+      // Transition sound; also plays for the first screen change after the page loads (the AudioContext
+      // may not exist yet, in which case it is silent).
       Sound.play('whoosh');
     }
   },
 
   /* ===== GAME FLOW ===== */
+  // Starts a fresh game: resets all state to the defaults (with hasStarted true so Continue works), saves
+  // it immediately (overwriting any old save), and opens the character creator. Called by the New Game button;
+  // there is no confirmation prompt.
   newGame() {
     this.state = {
+      // Same defaults as the initial `state`, except hasStarted is true.
       level: 1, xp: 0, coins: 0,
       closet: [], character: null,
       weather: 'sunny', soundOn: true, hasStarted: true,
@@ -167,6 +269,8 @@ const Game = {
     this.goTo('character');
   },
 
+  // Resumes a saved game: re-attaches the saved avatar to Character and opens the workshop. Called by the
+  // Continue button; does nothing if there is no game.
   continueGame() {
     if (!this.state.hasStarted) return;
     if (this.state.character) {
@@ -175,6 +279,8 @@ const Game = {
     this.goTo('workshop');
   },
 
+  // Called by the "Done" button of the creator: copies the avatar into the save file (getData makes a deep
+  // copy so later edits do not alter the saved copy), marks the game as started, saves and enters the workshop.
   finishCharacter() {
     this.state.character = Character.getData();
     this.state.hasStarted = true;
@@ -184,15 +290,22 @@ const Game = {
   },
 
   /* ===== STATE MANAGEMENT ===== */
+  // Writes the whole state to localStorage (U.save swallows storage errors, so a full disk or private
+  // browsing means progress is lost silently).
   save() {
     U.save('state', this.state);
   },
 
+  // Adds a finished item to the closet and saves. `item` is an object made by a station (see stations.js for the
+  // fields; the closet screen needs `type`, `name`, and optionally `image` and `subtype`).
   addToCloset(item) {
     this.state.closet.push(item);
     this.save();
   },
 
+  // Adds experience points, updates the HUD, saves, and plays a coin sound. It does not check for a level-up;
+  // the station that awarded the XP calls checkLevelUp() afterwards.
+  // @param {number} amount - XP to add (stations award 20-50).
   addXP(amount) {
     this.state.xp += amount;
     this._updateHUD();
@@ -200,6 +313,10 @@ const Game = {
     Sound.play('coin');
   },
 
+  // Looks up the next level's entry in LEVEL_DATA and, if the player has reached its XP threshold, raises the level
+  // by one and saves. Returns true when a level was gained (the caller then shows the level-up screen). Only one
+  // level per call, so a very large XP jump would need repeated calls.
+  // @returns {boolean} True if the level increased.
   checkLevelUp() {
     const nextLevel = LEVEL_DATA.find(l => l.lvl === this.state.level + 1);
     if (nextLevel && this.state.xp >= nextLevel.xp) {
@@ -210,6 +327,8 @@ const Game = {
     return false;
   },
 
+  // Adds coins (the currency) to the balance, refreshes the display and saves.
+  // @param {number} amount - Coins to add (may be fractional only if the caller allows it; sales are rounded).
   addCoins(amount) {
     this.state.coins += amount;
     this._updateHUD();
@@ -217,6 +336,9 @@ const Game = {
   },
 
   /* ===== UI UPDATES ===== */
+  // Writes the level, XP and coin numbers into the page. Each element lookup is null-checked because
+  // some of these elements exist only on one screen (the level badge is in the workshop header and the coin
+  // display in the customers header).
   _updateHUD() {
     const levelBadge = document.getElementById('level-badge');
     const xpText = document.getElementById('xp-text');
@@ -226,6 +348,8 @@ const Game = {
     if (levelBadge) levelBadge.textContent = `Lv ${this.state.level}`;
     if (xpText) {
       const nextLevel = LEVEL_DATA.find(l => l.lvl === this.state.level + 1);
+
+      // At the maximum level there is no next threshold, so the text shows an infinity symbol.
       const nextXP = nextLevel ? nextLevel.xp : '∞';
       xpText.textContent = `${this.state.xp} / ${nextXP} XP`;
     }
@@ -233,9 +357,12 @@ const Game = {
     if (workshopCoins) workshopCoins.textContent = `🪙 ${this.state.coins}`;
   },
 
+  // Greys out workshop station cards the player has not unlocked yet. Called every time the workshop opens.
   _updateCardLocks() {
     const lvl = this.state.level;
     // Salon unlocks at level 3, Makeup at 4, Tech at 5, Decor at 6, Books at 7
+    // Required level per station (station id -> level). The Fashion Studio is not listed, so it is always open.
+    // These numbers must match the strings in LEVEL_DATA and startFreestyle().
     const locks = { salon: 3, makeup: 4, tech: 5, decor: 6, books: 7 };
     Object.entries(locks).forEach(([station, reqLvl]) => {
       const card = document.getElementById('card-' + station);
@@ -243,6 +370,9 @@ const Game = {
         if (lvl >= reqLvl) {
           card.classList.remove('locked');
         } else {
+          // The 'locked' class dims the card and disables mouse events through CSS (pointer-events: none), so the
+          // handler below can never actually run while the card is locked; and it replaces the card's original inline
+          // onclick, which is never put back when the level rises (see the note in the file overview).
           card.classList.add('locked');
           card.onclick = () => { Sound.play('error'); };
         }
@@ -250,6 +380,8 @@ const Game = {
     });
   },
 
+  // Draws the saved avatar on the small workshop canvas (200x300). The scale 0.55 and centre at 45% of the height are
+  // tuned so the whole figure fits in the frame. Does nothing before a character has been created.
   _renderWorkshopChar() {
     const c = document.getElementById('workshop-char-canvas');
     if (!c || !this.state.character) return;
@@ -259,9 +391,11 @@ const Game = {
   },
 
   /* ===== LEVEL UP ===== */
+  // Fills in the level-up screen: the new level and a list of the features unlocked at that level.
   _renderLevelUp() {
     document.getElementById('levelup-level').textContent = `Level ${this.state.level}`;
 
+    // Find this level's entry; the unlock names are display text only.
     const levelData = LEVEL_DATA.find(l => l.lvl === this.state.level);
     const container = document.getElementById('levelup-unlocks');
     container.innerHTML = '';
@@ -271,26 +405,38 @@ const Game = {
         const badge = document.createElement('div');
         badge.className = 'unlock-badge';
         badge.textContent = '🔓 ' + unlock;
+
+        // Stagger the pop-in animation 0.15 s per badge so they appear one after another.
         badge.style.animationDelay = (i * 0.15) + 's';
         container.appendChild(badge);
       });
     }
 
+    // Celebrate: fanfare sound and confetti.
     Sound.play('levelup');
     this._fireConfetti();
   },
 
+  // Confetti burst on the full-window canvas. 80 coloured rectangles are launched upward from near the middle of the
+  // screen and fall under gravity, fading out. The animation runs by itself until all pieces have faded or 200 frames
+  // have passed (about 3.3 s at 60 fps), then clears the canvas.
   _fireConfetti() {
     const canvas = document.getElementById('confetti-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const particles = [];
+
+    // Palette: pink, gold, turquoise, purple, coral, light green and sky blue (the game's colours).
     const colors = ['#ff69b4','#ffd700','#3edbd5','#b36bff','#ff7b7b','#90ee90','#87ceeb'];
 
     for (let i = 0; i < 80; i++) {
       particles.push({
+        // Start position: horizontally within 100 px of the centre, vertically 40% down the screen.
         x: canvas.width/2 + (Math.random()-0.5) * 200,
         y: canvas.height * 0.4,
+
+        // Initial velocity in pixels per frame: sideways -6..+6, upward (negative y) 4..16 so pieces burst upward and
+        // spread. rotSpeed is radians per frame (spin); life goes from 1 to 0 and drives the fade-out.
         vx: (Math.random()-0.5) * 12,
         vy: -Math.random() * 12 - 4,
         color: U.pick(colors),
@@ -302,6 +448,8 @@ const Game = {
     }
 
     let frame = 0;
+
+    // One animation frame: clear, move each piece, draw it, and schedule the next frame while any piece is alive.
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       let alive = false;
@@ -311,10 +459,16 @@ const Game = {
         alive = true;
         p.x += p.vx;
         p.y += p.vy;
+
+        // Gravity: add 0.25 px/frame to the downward speed every frame, which gives the arc.
         p.vy += 0.25;
         p.rotation += p.rotSpeed;
+
+        // Fade at 0.8% per frame: a piece lives about 125 frames (~2 s).
         p.life -= 0.008;
 
+        // Draw each piece rotated about its own centre: translate to it, rotate, then draw a rectangle centred on the
+        // origin (the rectangle is 60% as tall as it is wide). save/restore stop the transform and alpha leaking.
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rotation);
@@ -324,6 +478,7 @@ const Game = {
         ctx.restore();
       });
 
+      // Keep animating while something is visible, with a 200-frame cap as a safety net; then wipe the canvas.
       if (alive && frame < 200) {
         frame++;
         requestAnimationFrame(animate);
@@ -335,6 +490,8 @@ const Game = {
   },
 
   /* ===== CUSTOMERS (Expanded) ===== */
+  // Builds the customer queue. How many customers appear depends on the closet: one per two items plus one,
+  // at most 8. Every visit creates new random customers (name, what they want, personality trait, look).
   _renderCustomers() {
     const queue = document.getElementById('customer-queue');
     const detail = document.getElementById('customer-detail');
@@ -345,6 +502,7 @@ const Game = {
     const coinsEl = document.getElementById('coins-display');
     if (coinsEl) coinsEl.textContent = `🪙 ${this.state.coins}`;
 
+    // Number of customers: floor(items / 2) + 1, capped at 8. With an empty closet no queue is shown, only a hint.
     const closetCount = this.state.closet.length;
     const customerCount = Math.min(Math.floor(closetCount / 2) + 1, 8);
 
@@ -353,6 +511,8 @@ const Game = {
       return;
     }
 
+    // Customer data: what category they want (or 'all'), the labels shown on the cards, the personality traits and the
+    // colour used for each trait label. The trait also sets the payout multiplier in _serveCustomer().
     const wantTypes = ['clothes','hair','makeup','tech','decor','books','all'];
     const wantLabels = { clothes:'👗 Clothes', hair:'💇 Hair Style', makeup:'💄 Makeup', tech:'📱 Tech', decor:'🛋️ Decor', books:'📚 Books', all:'✨ Anything' };
     const traits = ['Picky','Trendy','Budget','VIP','Mystery','Cheerful','Bold','Chill'];
@@ -362,14 +522,19 @@ const Game = {
       const name = U.pick(CUSTOMER_NAMES);
       const wants = U.pick(wantTypes);
       const trait = U.pick(traits);
+
+      // Mystery customers hide their name and look (a purple silhouette with a question mark) and pay triple.
       const isMystery = trait === 'Mystery';
       const skinTone = U.pick(SKIN_PRESETS);
       const hairColor = U.pick(HAIR_COLOR_PRESETS);
 
       const card = document.createElement('div');
+
       card.className = 'customer-card';
 
       // Mini character canvas
+      // Each card has a tiny 60x75 canvas on which a simple cartoon character is drawn (not the full Character renderer,
+      // which is too detailed for this size).
       const miniCanvas = document.createElement('canvas');
       miniCanvas.width = 60;
       miniCanvas.height = 75;
@@ -378,6 +543,8 @@ const Game = {
 
       // Draw mini character
       const mctx = miniCanvas.getContext('2d');
+
+      // Mystery silhouette: head circle, body shape, a gold question mark and two sparkles, with a vertical purple gradient.
       if (isMystery) {
         // Mystery silhouette — gradient purple
         const mg = mctx.createLinearGradient(30, 5, 30, 65);
@@ -398,6 +565,8 @@ const Game = {
         mctx.beginPath(); mctx.arc(46, 18, 1.5, 0, Math.PI*2); mctx.fill();
         mctx.globalAlpha = 1;
       } else {
+        // A normal customer: random top colour, then body, optional long hair behind, head, hair on top, eyes, blush
+        // and smile are drawn back to front.
         const topColor = U.pick(['#FF69B4','#1E90FF','#FFD700','#32CD32','#9370DB','#FF6347','#00CED1','#ff6eb4','#b36bff']);
         // Body
         mctx.fillStyle = topColor;
@@ -410,6 +579,8 @@ const Game = {
         mctx.fillStyle = 'rgba(0,0,0,0.08)';
         mctx.beginPath(); mctx.ellipse(28, 52, 5, 10, 0, 0, Math.PI*2); mctx.fill();
         // Hair back
+        // Draw long hair strands behind the body only when a randomly picked style is long (about a quarter of the
+        // time, since three of the twelve styles qualify).
         if (['long','straight','wavy'].includes(U.pick(HAIR_STYLES))) {
           mctx.fillStyle = hairColor;
           mctx.beginPath();
@@ -420,16 +591,19 @@ const Game = {
           mctx.lineTo(40, 36); mctx.closePath(); mctx.fill();
         }
         // Head
+        // Head and a faint highlight.
         mctx.fillStyle = skinTone;
         mctx.beginPath(); mctx.arc(30, 22, 14, 0, Math.PI*2); mctx.fill();
         // Head highlight
         mctx.fillStyle = 'rgba(255,255,255,0.15)';
         mctx.beginPath(); mctx.arc(27, 18, 6, 0, Math.PI*2); mctx.fill();
         // Hair top
+        // Hair on the top of the head (a half ellipse plus a flat fringe rectangle).
         mctx.fillStyle = hairColor;
         mctx.beginPath(); mctx.ellipse(30, 14, 16, 10, 0, Math.PI, 0, true); mctx.fill();
         mctx.fillRect(14, 14, 32, 3);
         // Eyes — big sparkly
+        // Eyes: for each side, white, blue iris, dark pupil and a small highlight.
         [-5,5].forEach(dx => {
           mctx.fillStyle = '#fff';
           mctx.beginPath(); mctx.ellipse(30+dx, 22, 4, 3.5, 0, 0, Math.PI*2); mctx.fill();
@@ -445,6 +619,7 @@ const Game = {
         mctx.beginPath(); mctx.ellipse(22, 26, 4, 2, 0, 0, Math.PI*2); mctx.fill();
         mctx.beginPath(); mctx.ellipse(38, 26, 4, 2, 0, 0, Math.PI*2); mctx.fill();
         // Tiny smile
+        // A small smile: a short arc at the bottom of the face.
         mctx.strokeStyle = '#e8888a'; mctx.lineWidth = 1.2; mctx.lineCap = 'round';
         mctx.beginPath(); mctx.arc(30, 28, 3, 0.15*Math.PI, 0.85*Math.PI); mctx.stroke();
       }
@@ -464,6 +639,7 @@ const Game = {
       wantsEl.textContent = wantLabels[wants] || wants;
       card.appendChild(wantsEl);
 
+      // Selecting a customer shows their reaction (and a Sell button) in the detail pane.
       card.onclick = () => {
         this._serveCustomer(isMystery ? '???' : name, wants, trait, detail, card);
         Sound.play('select');
@@ -472,7 +648,14 @@ const Game = {
     }
   },
 
+  // Shows what the chosen customer wants and what they will pay.
+  // @param {string} name - Display name ('???' for a mystery customer).
+  // @param {string} wants - Category wanted ('clothes', 'hair', ..., or 'all').
+  // @param {string} trait - Personality trait (decides the payout multiplier).
+  // @param {HTMLElement} detailEl - The #customer-detail pane to fill.
+  // @param {HTMLElement} cardEl - The customer's card, dimmed once served.
   _serveCustomer(name, wants, trait, detailEl, cardEl) {
+    // Items this customer would buy: any item for 'all', otherwise items whose `type` equals the wanted category.
     const items = this.state.closet.filter(i => {
       if (wants === 'all') return true;
       return i.type === wants;
@@ -484,8 +667,11 @@ const Game = {
       return;
     }
 
+    // The customer buys a random matching item (the player does not choose).
     const item = U.pick(items);
     // Coins based on trait
+    // Payout multiplier by trait: VIP 2.5, Mystery 3, Trendy 1.5, Budget 0.7, everyone else 1. The base is a random
+    // 10 to 30 coins per player level, so rewards grow as the player levels up; the result is rounded to a whole number.
     let coinMult = 1;
     if (trait === 'VIP') coinMult = 2.5;
     if (trait === 'Mystery') coinMult = 3;
@@ -493,6 +679,7 @@ const Game = {
     if (trait === 'Trendy') coinMult = 1.5;
     const coins = Math.round(U.rand(10, 30) * this.state.level * coinMult);
 
+    // Random flavour text for the reaction line and the quote.
     const reactions = ['loves', 'adores', 'is obsessed with', 'can\'t stop looking at', 'is thrilled by'];
     const quotes = [
       `"This ${item.name} is absolutely perfect!"`,
@@ -503,10 +690,15 @@ const Game = {
       `"This is the best ${item.type} I've ever seen!"`,
     ];
 
+    // Extra line announcing the bonus for VIP and Mystery customers; empty for the others.
     const traitBonus = trait === 'VIP' ? '<div style="font-size:12px;color:#FFD700;margin:4px 0;">✨ VIP Bonus: 2.5x coins!</div>'
       : trait === 'Mystery' ? '<div style="font-size:12px;color:#9370DB;margin:4px 0;">🔮 Mystery Bonus: 3x coins!</div>'
       : '';
 
+    // Builds the detail pane as an HTML string. The item name and id come from the player's own saved items
+    // (not from other users), and the Sell button's inline onclick embeds the amount and the item id, so
+    // _completeSale() receives them as arguments. If item names could ever contain markup this would be an
+    // injection risk, but item names are generated by the game.
     detailEl.innerHTML = `
       <div style="text-align:center">
         <div style="font-size:64px;margin-bottom:12px;">🤩</div>
@@ -521,12 +713,19 @@ const Game = {
     `;
 
     // Fade out the card
+    // Dim the card and stop it from being clicked again so the same customer cannot be served twice.
     if (cardEl) {
       cardEl.style.opacity = '0.5';
       cardEl.style.pointerEvents = 'none';
     }
   },
 
+  // Completes a sale: pays the coins, adds 20 XP, removes the sold item from the closet and shows a thank-you
+  // message. Called by the Sell button created in _serveCustomer(); note that it does not call checkLevelUp(),
+  // so selling alone never triggers the level-up screen (the next finished item will).
+  // @param {number} coins - Coins to pay.
+  // @param {string} itemId - Id of the sold closet item (compared as a string because it was written into
+  //   an onclick attribute).
   _completeSale(coins, itemId) {
     this.addCoins(coins);
     this.addXP(20);
@@ -540,9 +739,13 @@ const Game = {
   },
 
   /* ===== FREESTYLE CHALLENGE ===== */
+  // The "Freestyle Challenge" button: picks a random unlocked station and a random theme prompt, shows it in a popup,
+  // then opens that station when the player dismisses it.
   startFreestyle() {
     const stations = ['studio','salon','makeup','tech','decor','books'];
     const stationNames = { studio:'Fashion Studio', salon:'Hair Salon', makeup:'Makeup Studio', tech:'Tech Workshop', decor:'Home Decor', books:'Book Shop' };
+
+    // Theme prompts shown to the player. They are suggestions only; nothing checks that the design follows them.
     const challenges = [
       'Create something using only warm colors! 🔥',
       'Use glitter on EVERYTHING! ✨',
@@ -563,10 +766,14 @@ const Game = {
 
     // Pick random station (only unlocked ones)
     const lvl = this.state.level;
+
+    // Same unlock table as _updateCardLocks (duplicated); only stations the player has unlocked can be picked.
     const locks = { salon: 3, makeup: 4, tech: 5, decor: 6, books: 7 };
     const available = stations.filter(s => !locks[s] || lvl >= locks[s]);
     const station = U.pick(available);
     const challenge = U.pick(challenges);
+
+    // Declared but never used (no bonus is awarded).
     const bonusXP = 25;
 
     // Show challenge toast then navigate
@@ -576,9 +783,16 @@ const Game = {
     Sound.play('challenge');
   },
 
+  // Shows a modal popup (a dark overlay with a centred card) built entirely with inline styles, because it is created
+  // dynamically and not defined in index.html. Uses the CSS animations fadeIn and popIn from style.css.
+  // @param {string} title - Heading text (inserted as HTML).
+  // @param {string} message - Body text (inserted as HTML).
+  // @param {Function} [onDismiss] - Called once when the player closes the popup.
   _showToast(title, message, onDismiss) {
     // Create toast overlay
     const overlay = document.createElement('div');
+
+    // Fixed full-screen overlay above everything (z-index 10000, higher than the modals at 100).
     overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);animation:fadeIn 0.3s ease;';
 
     const toast = document.createElement('div');
@@ -591,6 +805,8 @@ const Game = {
       <button class="btn btn-primary" style="min-width:140px;">Let's Go! ✨</button>
     `;
 
+    // Closing: remove the overlay and run the callback. Clicking the dark background (not the card) does the same, which
+    // is why the handler checks e.target === overlay.
     toast.querySelector('button').onclick = () => {
       overlay.remove();
       if (onDismiss) onDismiss();
@@ -602,11 +818,13 @@ const Game = {
   },
 
   /* ===== SETTINGS ===== */
+  // Opens the settings modal (adds the CSS class "active") and clicks.
   showSettings() {
     document.getElementById('settings-modal').classList.add('active');
     Sound.play('click');
   },
 
+  // Closes the settings modal and saves the chosen weather and sound setting into the state, which is how settings persist.
   closeSettings() {
     document.getElementById('settings-modal').classList.remove('active');
     this.state.weather = Weather.current;
@@ -614,6 +832,8 @@ const Game = {
     this.save();
   },
 
+  // Deletes all progress after a confirmation dialog and reloads the page so the game restarts from a clean state.
+  // The key name is the 'fashion_' prefix that U.save adds plus 'state'.
   resetGame() {
     if (confirm('Are you sure? This will delete all progress!')) {
       localStorage.removeItem('fashion_state');
@@ -622,6 +842,8 @@ const Game = {
   },
 };
 
+// Wait for the DOM so every element that init() looks up exists. This is the only place the game starts itself;
+// there is no explicit "start" call elsewhere.
 /* ===== INIT ON LOAD ===== */
 window.addEventListener('DOMContentLoaded', () => {
   Game.init();
