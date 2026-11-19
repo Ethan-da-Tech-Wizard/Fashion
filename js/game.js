@@ -67,6 +67,7 @@ const Game = {
     console.log('✨ Fashion Game initialized!');
   },
 
+  // Generates randomized floating emoji particle elements with variable speed, scale, and animation delay
   _initParticles() {
     const pContainer = document.getElementById('particles-container');
     if (!pContainer) return;
@@ -95,6 +96,7 @@ const Game = {
   },
 
   /* ===== NAVIGATION ===== */
+  // Executes stateful scene transitions, updating DOM screen visibility and orchestrating subsystem focus
   goTo(screen) {
     // Hide all screens
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

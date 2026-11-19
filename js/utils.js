@@ -21,6 +21,8 @@ const U = {
   },
 
   /* Color conversions */
+  // Transforms cylindrical HSL coordinates into linear RGB color space [0..255]
+  // Algorithm computes chroma amplitude 'a' and modulo piecewise hue intervals
   hslToRgb(h, s, l) {
     s /= 100; l /= 100;
     const k = n => (n + h / 30) % 12;
@@ -39,6 +41,7 @@ const U = {
     const m = hex.match(/^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
     return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [255,105,180];
   },
+  // Deconstructs hexadecimal color string into RGB float channels [0..1] and derives cylindrical HSL representation
   hexToHsl(hex) {
     let [r, g, b] = U.hexToRgb(hex).map(x => x/255);
     const max = Math.max(r,g,b), min = Math.min(r,g,b);
@@ -75,6 +78,7 @@ const U = {
   load(key) { try { return JSON.parse(localStorage.getItem('fashion_'+key)); } catch(e){ return null; } },
 
   /* Debounce */
+  // Delays invocation until after wait interval has elapsed since the last call to throttle event frequency
   debounce(fn, ms) {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
