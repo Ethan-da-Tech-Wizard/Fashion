@@ -48,6 +48,7 @@ const Tech = {
    * Initializes Tech Workshop canvas geometry, resets active gadget model, and loads tools.
    */
   init() {
+    // Looked up by id on each call because Tools.setup() can replace the canvas element with a clone.
     const c = document.getElementById('tech-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -69,6 +70,8 @@ const Tech = {
   _buildTools() {
     const tools = document.getElementById('tech-tools');
     if (!tools) return;
+
+    // Clear first: init() runs on every visit and must not stack duplicate buttons.
     tools.innerHTML = '';
 
     // Each entry: id (passed to _buildSidePanel), icon (a key in Icons.paths) and label.
@@ -86,6 +89,8 @@ const Tech = {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
+
+      // Icon above its label (.tool-btn defaults to a row).
       btn.style.flexDirection = 'column';
       btn.title = t.label;
 
@@ -106,6 +111,8 @@ const Tech = {
   _buildSidePanel(toolId) {
     const side = document.getElementById('tech-side');
     if (!side) return;
+
+    // Discard the previous tool's panel before building the new one.
     side.innerHTML = '';
 
     // Device picker: one cell per entry in DEVICE_TYPES; choosing a cell draws that device straight away.
@@ -114,10 +121,13 @@ const Tech = {
       h4.textContent = 'Choose Device';
       side.appendChild(h4);
 
+      // .item-grid fits as many 48 px cells as the 220 px panel allows.
       const grid = document.createElement('div');
       grid.className = 'item-grid';
       DEVICE_TYPES.forEach(d => {
         const cell = document.createElement('div');
+
+        // The current device is highlighted when the panel is built.
         cell.className = 'item-cell' + (this.deviceType === d.id ? ' active' : '');
 
         // Icon plus name (the icon id equals the device id, which icons.js does not define, so the fallback star shows).
@@ -149,6 +159,7 @@ const Tech = {
       colorBtn.className = 'color-pick-btn';
       colorBtn.style.background = this.deviceColor;
       colorBtn.onclick = () => {
+        // Load the current colour so the wheel opens on it; the callback below applies the pick and repaints.
         ColorWheel.setFromHex(this.deviceColor);
         ColorWheel.open('device', hex => {
           this.deviceColor = hex;
@@ -158,6 +169,7 @@ const Tech = {
       };
       side.appendChild(colorBtn);
 
+      // Twelve body colours: dark navy, off-white, gold, pink, blue, purple, green, orange, silver, dark red, black and sky blue.
       const colors = ['#1a1a2e','#F5F5F5','#FFD700','#FF69B4','#1E90FF','#9370DB','#2E8B57','#FF4500','#C0C0C0','#8B0000','#000000','#87CEEB'];
       const qg = document.createElement('div');
       qg.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;';
@@ -165,6 +177,8 @@ const Tech = {
         const sw = document.createElement('div');
         sw.className = 'cw-recent-swatch';
         sw.style.background = c;
+
+        // A quick swatch sets the colour, updates the big swatch and repaints in one go.
         sw.onclick = () => { this.deviceColor = c; colorBtn.style.background = c; this._drawDevice(); Sound.play('click'); };
         qg.appendChild(sw);
       });
@@ -185,6 +199,8 @@ const Tech = {
         const sw = document.createElement('div');
         sw.className = 'cw-recent-swatch';
         sw.style.background = c;
+
+        // Screen swatches only change the screen colour and repaint (there is no big swatch to update for the screen).
         sw.onclick = () => { this.screenColor = c; this._drawDevice(); Sound.play('click'); };
         sg.appendChild(sw);
       });
@@ -202,6 +218,8 @@ const Tech = {
       const h4 = document.createElement('h4');
       h4.textContent = 'Stickers';
       side.appendChild(h4);
+
+      // Twenty emoji: the first ten are tech-related (devices, camera, battery, antenna, bulb, bolt, plug), the rest general decorations.
       const techStickers = ['📱','💻','🎮','🎧','📷','🔋','📡','💡','⚡','🔌',
         '🎵','🎶','🌟','💎','🦋','🌸','❤️','⭐','🔥','💜'];
       const grid = document.createElement('div');
@@ -220,6 +238,8 @@ const Tech = {
       });
       side.appendChild(grid);
       Tools.currentTool = 'sticker';
+
+      // Brush size 8 gives 24 px stickers (size is 3 x brushSize).
       Tools.brushSize = 8;
       Tools.setup('tech-canvas');
 
@@ -239,6 +259,8 @@ const Tech = {
     // scratch (removing everything painted).
     } else if (toolId === 'eraser') {
       Tools.currentTool = 'eraser';
+
+      // Eraser radius 15 px, a generous size so large areas are quick to clear.
       Tools.brushSize = 15;
       Tools.setup('tech-canvas');
       const h4 = document.createElement('h4');
@@ -252,6 +274,8 @@ const Tech = {
       resetBtn.className = 'btn btn-ghost';
       resetBtn.style.cssText = 'width:100%;margin-top:12px;';
       resetBtn.textContent = '🔄 Reset Device';
+
+      // Reset repaints the device from its settings, wiping all paint and stickers (it is also how the device comes back if Tools.setup() blanked the canvas).
       resetBtn.onclick = () => { this._drawDevice(); Sound.play('whoosh'); };
       side.appendChild(resetBtn);
     }
@@ -274,6 +298,7 @@ const Tech = {
     };
     side.appendChild(colorBtn);
 
+    // The same 12 quick colours the Fashion Studio offers (pinks, reds, gold, green, blue, purple, teal, orange, white, black, dark red).
     const quickColors = ['#FF69B4','#FF6347','#FFD700','#32CD32','#1E90FF','#9370DB','#FF1493','#00CED1','#FFA500','#FFFFFF','#000000','#8B0000'];
     const qGrid = document.createElement('div');
     qGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;';
@@ -292,6 +317,8 @@ const Tech = {
     slbl.style.marginTop = '10px';
     side.appendChild(slbl);
     const slider = document.createElement('input');
+
+    // Size 2-30 px; the slider starts at the current Tools.brushSize so it matches the tool's real value.
     slider.type = 'range'; slider.min = '2'; slider.max = '30'; slider.value = Tools.brushSize;
     slider.style.cssText = 'width:100%;accent-color:var(--accent-pink);';
     slider.oninput = () => { Tools.brushSize = parseInt(slider.value); };
@@ -317,9 +344,13 @@ const Tech = {
     if (!c || !this.deviceType) return;
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
+
+    // Repaint from scratch: removes earlier paint and stickers.
     ctx.clearRect(0, 0, w, h);
 
     const cx = w/2, cy = h/2;
+
+    // Look up the device's size record; if the id is unknown nothing is drawn.
     const d = DEVICE_TYPES.find(t => t.id === this.deviceType);
     if (!d) return;
 
@@ -327,6 +358,7 @@ const Tech = {
     // a fixed size, so its table size is not used.
     const sw = d.w, sh = d.h;
 
+    // Dispatch to the per-device drawing routine.
     if (this.deviceType === 'phone') {
       this._drawPhone(ctx, cx, cy, sw, sh);
     } else if (this.deviceType === 'tablet') {
@@ -362,6 +394,7 @@ const Tech = {
     ctx.stroke();
 
     // Screen
+    // Bezel thickness: 12 px of body colour around the screen (plus 8 px extra at the top for the camera).
     const margin = 12;
     ctx.fillStyle = this.screenColor;
     this._roundRect(ctx, cx - sw/2 + margin, cy - sh/2 + margin + 8, sw - margin*2, sh - margin*2 - 16, 8);
@@ -380,11 +413,15 @@ const Tech = {
     // Camera dot
     ctx.fillStyle = '#333';
     ctx.beginPath();
+
+    // Front camera: a 3 px dark dot centred 10 px below the top edge.
     ctx.arc(cx, cy - sh/2 + 10, 3, 0, Math.PI*2);
     ctx.fill();
 
     // Bottom bar
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
+
+    // Home bar: a 40x4 px translucent pill 14 px above the bottom edge.
     this._roundRect(ctx, cx - 20, cy + sh/2 - 14, 40, 4, 2);
     ctx.fill();
 
@@ -417,6 +454,7 @@ const Tech = {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
+    // Tablet bezel: 10 px all round (thinner than the phone's top/bottom).
     const margin = 10;
     ctx.fillStyle = this.screenColor;
     this._roundRect(ctx, cx - sw/2 + margin, cy - sh/2 + margin, sw - margin*2, sh - margin*2, 6);
@@ -432,6 +470,8 @@ const Tech = {
 
     ctx.fillStyle = '#333';
     ctx.beginPath();
+
+    // Tablet camera dot: 2 px radius, 6 px below the top edge.
     ctx.arc(cx, cy - sh/2 + 6, 2, 0, Math.PI*2);
     ctx.fill();
 
@@ -449,6 +489,7 @@ const Tech = {
   // @param {number} cy - Centre y.
   _drawAirpods(ctx, cx, cy) {
     // Case
+    // Charging case size in pixels (width, height) and corner radius.
     const caseW = 90, caseH = 100, caseR = 20;
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     this._roundRect(ctx, cx - caseW/2 + 3, cy - caseH/2 + 3, caseW, caseH, caseR);
@@ -462,6 +503,8 @@ const Tech = {
     ctx.strokeStyle = 'rgba(255,255,255,0.1)';
     ctx.lineWidth = 1;
     ctx.beginPath();
+
+    // The hinge line runs across the case 8 px above the centre, inset 5 px from each edge.
     ctx.moveTo(cx - caseW/2 + 5, cy - 8);
     ctx.lineTo(cx + caseW/2 - 5, cy - 8);
     ctx.stroke();
@@ -469,6 +512,8 @@ const Tech = {
     // LED indicator
     ctx.fillStyle = '#32CD32';
     ctx.beginPath();
+
+    // Green status LED near the bottom edge.
     ctx.arc(cx, cy + caseH/2 - 15, 3, 0, Math.PI*2);
     ctx.fill();
 
@@ -481,6 +526,8 @@ const Tech = {
 
     // Airpod outlines inside
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
+
+    // One earbud outline on each side of centre: a head (ellipse 12x20) and a stem (6x15 rectangle) below it.
     [-18, 18].forEach(dx => {
       ctx.beginPath();
       ctx.ellipse(cx + dx, cy - 22, 12, 20, 0, 0, Math.PI*2);
@@ -499,6 +546,8 @@ const Tech = {
   // @param {number} r - Corner radius (must not exceed half the width or height).
   _roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
+
+    // Start on the top edge after the corner, then four arcTo calls round the corners clockwise. arcTo needs the corner point and the next point, which is why each call lists the two adjacent corners.
     ctx.moveTo(x + r, y);
     ctx.arcTo(x + w, y, x + w, y + h, r);
     ctx.arcTo(x + w, y + h, x, y + h, r);
@@ -527,6 +576,7 @@ const Tech = {
       });
     }
 
+    // Reward feedback: jingle plus 50 XP.
     Sound.play('complete');
 
     // Award XP; the extra Game.save() is redundant (addXP saves) but harmless.
