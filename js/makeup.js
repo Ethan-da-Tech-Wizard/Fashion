@@ -65,6 +65,7 @@ const Makeup = {
    * Initializes Makeup Studio canvas dimensions, resets layers, and renders face portrait.
    */
   init() {
+    // Looked up by id on each call (not cached) because Tools.setup() can replace the canvas element with a clone.
     const c = document.getElementById('makeup-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -96,6 +97,8 @@ const Makeup = {
   _buildTools() {
     const tools = document.getElementById('makeup-tools');
     if (!tools) return;
+
+    // Clear the column first: init() runs on every visit and must not stack duplicate buttons.
     tools.innerHTML = '';
 
     // Each entry: id (used by _onToolChange), icon (a key in Icons.paths; 'lipstick' is missing, see the file overview) and
@@ -116,6 +119,8 @@ const Makeup = {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (i === 0 ? ' active' : '');
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
+
+      // Put the label under the icon (the default .tool-btn layout is a single row).
       btn.style.flexDirection = 'column';
       btn.title = t.label;
 
@@ -138,8 +143,11 @@ const Makeup = {
   _onToolChange(toolId) {
     const side = document.getElementById('makeup-side');
     if (!side) return;
+
+    // Throw away the previous tool's panel; each tool builds its own.
     side.innerHTML = '';
 
+    // One panel builder per tool id; 'eraser' has no panel of its own, it resets the state inline.
     switch(toolId) {
       case 'blush': this._buildBlushPanel(side); break;
       case 'shadow': this._buildShadowPanel(side); break;
@@ -190,6 +198,7 @@ const Makeup = {
     });
     side.appendChild(colorBtn);
 
+    // Quick swatches change the colour and repaint immediately; they do not touch the opacity, so a colour is only visible once the Intensity slider is above 0.
     // Quick colors
     const colors = ['#FFB6C1','#FF69B4','#FF1493','#E8967A','#F4A460','#DEB887','#CD5C5C','#FF7F7F','#FFA07A','#DB7093'];
     side.appendChild(this._makeSwatchGrid(colors, c => {
@@ -197,6 +206,7 @@ const Makeup = {
     }));
 
     // Intensity slider
+    // The slider works in whole percent (0-100); the state stores a 0-1 fraction, so the value is multiplied by 100 going in and divided by 100 coming out.
     side.appendChild(this._makeSlider('Intensity', this.blushOpacity * 100, 0, 100, v => {
       this.blushOpacity = v / 100;
       this._drawFace();
@@ -277,6 +287,7 @@ const Makeup = {
       this.linerColor = c; colorBtn.style.background = c; this._drawFace();
     }));
 
+    // Toggle button: its class (btn-primary vs btn-ghost) and text are set from the current state when the panel is built and updated again on every click, so the panel always shows the true state.
     // Toggle
     const toggle = document.createElement('button');
     toggle.className = 'btn ' + (this.linerOn ? 'btn-primary' : 'btn-ghost');
@@ -301,6 +312,8 @@ const Makeup = {
     side.appendChild(h4);
 
     const p = document.createElement('p');
+
+    // Short muted explanation text under the heading.
     p.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:12px;';
     p.textContent = 'Add beautiful lashes to your look!';
     side.appendChild(p);
@@ -362,6 +375,7 @@ const Makeup = {
     side.appendChild(p);
 
     // Color mixer
+    // One row containing the colour swatch and the "+ Create" button.
     const mixerRow = document.createElement('div');
     mixerRow.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:10px;';
 
@@ -408,6 +422,8 @@ const Makeup = {
         sw.className = 'cw-recent-swatch';
         sw.style.background = c;
         sw.style.cursor = 'pointer';
+
+        // Tooltip. (In practice a click applies the shade to blush and eyeshadow; lipstick is not changed.)
         sw.title = 'Click to use as blush/shadow/lip';
         sw.onclick = () => {
           // Applies the shade to blush and shadow and makes sure each is at least visible (opacity at least 0.4 / 0.35), so the
@@ -465,6 +481,8 @@ const Makeup = {
     const btn = document.createElement('div');
     btn.className = 'color-pick-btn';
     btn.style.background = color;
+
+    // Space below the button so the swatch grid that follows is not touching it.
     btn.style.margin = '0 0 8px 0';
     btn.onclick = () => {
       ColorWheel.setFromHex(color);
@@ -503,6 +521,8 @@ const Makeup = {
   // @returns {HTMLElement} The wrapper element.
   _makeSlider(label, value, min, max, onChange) {
     const wrap = document.createElement('div');
+
+    // Separate each slider from the element above.
     wrap.style.marginTop = '10px';
     const h4 = document.createElement('h4');
     h4.textContent = label;
@@ -513,6 +533,8 @@ const Makeup = {
     slider.max = String(max);
     slider.value = String(value);
     slider.style.cssText = 'width:100%;accent-color:var(--accent-pink);';
+
+    // `oninput` fires continuously while dragging (unlike `onchange`, which fires on release), so the face updates live.
     slider.oninput = () => { onChange(parseInt(slider.value)); };
     wrap.appendChild(slider);
     return wrap;
@@ -528,8 +550,11 @@ const Makeup = {
     if (!c) return;
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
+
+    // Start from a transparent canvas: every layer is repainted each time.
     ctx.clearRect(0, 0, w, h);
 
+    // Centre of the canvas, which is also the centre of the face.
     const cx = w/2, cy = h/2;
 
     // Face radius in pixels; every feature offset below was tuned against this size.
@@ -545,11 +570,15 @@ const Makeup = {
     // Neck: a 40x60 rectangle behind the lower face; shoulders: an ellipse of the outfit's top colour.
     // Neck
     ctx.fillStyle = skinColor;
+
+    // Neck: 40 px wide, starting 75% of the radius below the centre so the face circle overlaps its top.
     ctx.fillRect(cx - 20, cy + r*0.75, 40, 60);
 
     // Shoulders
     ctx.fillStyle = charData.outfit?.top || '#ff69b4';
     ctx.beginPath();
+
+    // Shoulders: a 90x35 ellipse below the chin, in the outfit's top colour.
     ctx.ellipse(cx, cy + r + 55, 90, 35, 0, 0, Math.PI*2);
     ctx.fill();
 
@@ -558,6 +587,8 @@ const Makeup = {
     // Hair back (behind face)
     ctx.fillStyle = hairColor;
     ctx.beginPath();
+
+    // Hair mass behind the face: slightly taller than wide, so hair shows above and at the sides.
     ctx.ellipse(cx, cy - 5, r*1.15, r*1.25, 0, 0, Math.PI*2);
     ctx.fill();
 
@@ -570,6 +601,8 @@ const Makeup = {
     // Ears reuse the skin fill still active from the face.
     // Ears
     ctx.beginPath();
+
+    // Left and right ears at 94% of the radius, just inside the face edge, 5 px below the centre.
     ctx.ellipse(cx - r*0.94, cy + 5, 12, 16, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.beginPath();
@@ -581,9 +614,13 @@ const Makeup = {
     // ===== MAKEUP: EYESHADOW =====
     if (this.shadowOpacity > 0) {
       ctx.fillStyle = this.shadowColor;
+
+      // The shadow never reaches full strength (max 55%), so even at Intensity 100 the skin tone shows through, which looks more like real makeup.
       ctx.globalAlpha = this.shadowOpacity * 0.55;
       // Left eye shadow
       ctx.beginPath();
+
+      // Shadow ellipse above the left eye (28x16, tilted -0.15 rad so it follows the brow); the right one is mirrored with +0.15.
       ctx.ellipse(cx - 32, cy - 15, 28, 16, -0.15, 0, Math.PI*2);
       ctx.fill();
       // Right eye shadow
@@ -592,6 +629,7 @@ const Makeup = {
       ctx.fill();
 
       // Gradient fade
+      // A second, darker, smaller ellipse near the lash line adds a gradient-like depth.
       const shadowDark = Character._darken(this.shadowColor, 20);
       ctx.fillStyle = shadowDark;
       ctx.globalAlpha = this.shadowOpacity * 0.3;
@@ -608,6 +646,7 @@ const Makeup = {
     // Eyes: for each side (dir -1 = left, +1 = right) draw the white, optional liner and lashes, iris, pupil and two
     // highlights. Eyes are 32 px either side of the centre.
     // ===== EYES =====
+    // Eye line is just below the face centre; the eyes are 32 px either side.
     const eyeY = cy + 2;
     const eyeSpacing = 32;
     [-1, 1].forEach(dir => {
@@ -616,6 +655,8 @@ const Makeup = {
       // Whites
       ctx.fillStyle = '#fff';
       ctx.beginPath();
+
+      // Sclera: a 16x14 ellipse (slightly wider than tall), with a faint outline.
       ctx.ellipse(ex, eyeY, 16, 14, 0, 0, Math.PI*2);
       ctx.fill();
       ctx.strokeStyle = 'rgba(0,0,0,0.1)';
@@ -634,6 +675,8 @@ const Makeup = {
         // Wing
         ctx.beginPath();
         ctx.moveTo(ex + dir*16, eyeY - 3);
+
+        // The wing: from the outer corner (16 px out) flicking 7 px further out and 7 px up.
         ctx.lineTo(ex + dir*23, eyeY - 10);
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -647,6 +690,7 @@ const Makeup = {
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         for (let i = 0; i < 5; i++) {
+          // Angle of lash i: five lashes spread evenly from -0.3 pi to -0.9 pi, which on a canvas (y down) is the upper half of the eye.
           const a = -Math.PI*0.3 + (i / 4) * Math.PI * 0.6 * -1;
           const lx = ex + Math.cos(a) * 17;
           const ly = eyeY + Math.sin(a) * 15;
@@ -663,10 +707,13 @@ const Makeup = {
       // Iris
       ctx.fillStyle = eyeColor;
       ctx.beginPath();
+
+      // Iris: a coloured disc of radius 10 inside the 14-16 px white.
       ctx.arc(ex + dir, eyeY, 10, 0, Math.PI*2);
       ctx.fill();
 
       // Pupil
+      // Pupil: a dark disc of radius 5.
       ctx.fillStyle = '#1a1a2e';
       ctx.beginPath();
       ctx.arc(ex + dir, eyeY, 5, 0, Math.PI*2);
@@ -675,6 +722,8 @@ const Makeup = {
       // Highlights
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.beginPath();
+
+      // Two highlights (a large and a small one, 85% and 50% white) make the eye look wet and alive.
       ctx.arc(ex - 3, eyeY - 4, 3.5, 0, Math.PI*2);
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
@@ -701,6 +750,7 @@ const Makeup = {
     // never looks flat.
     // ===== MAKEUP: BLUSH =====
     if (this.blushOpacity > 0) {
+      // Blush is capped at 45% opacity so it stays soft, like the other layers.
       ctx.globalAlpha = this.blushOpacity * 0.45;
       ctx.fillStyle = this.blushColor;
       ctx.beginPath();
@@ -721,6 +771,8 @@ const Makeup = {
     // Nose
     ctx.fillStyle = skinDark;
     ctx.beginPath();
+
+    // The nose is a dot 30 px below the centre; the shine is a smaller, 15% white dot just up and left of it.
     ctx.arc(cx, cy + 30, 5, 0, Math.PI*2);
     ctx.fill();
     // Nose shine
@@ -735,6 +787,8 @@ const Makeup = {
     // ===== MAKEUP: LIPS =====
     if (this.lipOpacity > 0) {
       ctx.fillStyle = this.lipColor;
+
+      // Lip opacity runs from 30% (slider at its lowest non-zero value) to 100%, so any applied lipstick is clearly visible.
       ctx.globalAlpha = this.lipOpacity * 0.7 + 0.3;
 
       // Upper lip
@@ -775,6 +829,8 @@ const Makeup = {
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
+
+      // Natural lower lip (the upper lip was drawn just above).
       ctx.moveTo(cx - 14, cy + 50);
       ctx.quadraticCurveTo(cx, cy + 58, cx + 14, cy + 50);
       ctx.quadraticCurveTo(cx, cy + 54, cx - 14, cy + 50);
@@ -787,6 +843,8 @@ const Makeup = {
     // ===== MAKEUP: HIGHLIGHT/GLOW =====
     if (this.highlightOn) {
       ctx.globalAlpha = 0.35;
+
+      // Brow-bone glow: a radial gradient from warm white at the centre to fully transparent at 40 px, positioned 55% of the radius above the face centre (the forehead area).
       const grad = ctx.createRadialGradient(cx, cy - r*0.55, 0, cx, cy - r*0.55, 40);
       grad.addColorStop(0, 'rgba(255,255,240,0.8)');
       grad.addColorStop(1, 'rgba(255,255,240,0)');
@@ -796,6 +854,7 @@ const Makeup = {
       ctx.fill();
 
       // Cheek glow
+      // Cheek glows: one per side, 50 px either side of the centre, 20 px radius.
       [-50, 50].forEach(dx => {
         const g2 = ctx.createRadialGradient(cx+dx, cy+22, 0, cx+dx, cy+22, 20);
         g2.addColorStop(0, 'rgba(255,255,240,0.6)');
@@ -807,6 +866,7 @@ const Makeup = {
       });
 
       // Nose bridge highlight
+      // Nose-bridge glow: a small 12 px gradient above the nose.
       const g3 = ctx.createRadialGradient(cx, cy+20, 0, cx, cy+20, 12);
       g3.addColorStop(0, 'rgba(255,255,240,0.5)');
       g3.addColorStop(1, 'rgba(255,255,240,0)');
@@ -823,9 +883,13 @@ const Makeup = {
     // ===== HAIR FRONT (bangs, sits on top) =====
     ctx.fillStyle = hairColor;
     ctx.beginPath();
+
+    // Front hair cap: the upper half of an ellipse (angles pi to 0, counter-clockwise) across the forehead.
     ctx.ellipse(cx, cy - r*0.38, r*1.1, r*0.55, 0, Math.PI, 0, true);
     ctx.fill();
     ctx.beginPath();
+
+    // A thin band along the bottom of the cap fills the gap between the half-ellipse and the hairline.
     ctx.rect(cx - r*1.1, cy - r*0.38, r*2.2, r*0.12);
     ctx.fill();
 
@@ -848,6 +912,8 @@ const Makeup = {
 
       // Build the item's name from the cosmetics used (for example "Blush + Lip Look"), or "Natural Look" if none.
       const lookName = [];
+
+      // Collect the names of the cosmetics that are on, in a fixed order.
       if (this.blushOpacity > 0) lookName.push('Blush');
       if (this.shadowOpacity > 0) lookName.push('Shadow');
       if (this.lipOpacity > 0) lookName.push('Lip');
@@ -859,6 +925,8 @@ const Makeup = {
         id: Date.now(),
         type: 'makeup',
         subtype: 'look',
+
+        // Joined with " + " ("Blush + Lip Look") or "Natural Look" when nothing was applied.
         name: lookName.length > 0 ? lookName.join(' + ') + ' Look' : 'Natural Look',
         image: imageData,
         createdAt: Date.now(),
