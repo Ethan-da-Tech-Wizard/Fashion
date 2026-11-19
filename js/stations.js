@@ -86,6 +86,7 @@ const Stations = {
   // width/height also clears the canvas. This changes the canvas away from the 600x500 attributes
   // in index.html.
   _resizeCanvas() {
+    // Looked up by id on each call because Tools.setup() can replace the canvas element with a clone.
     const c = document.getElementById('studio-canvas');
     if (!c) return;
     const parent = c.parentElement;
@@ -98,12 +99,14 @@ const Stations = {
   nextStep() {
     // Cannot leave the first step without a garment: play the error sound and stay.
     if (this.currentStep === 0 && !this.garmentType) {
+      // The error buzz tells the player the Next button was refused because no garment is chosen yet.
       Sound.play('error');
       return;
     }
 
     // Advance and redraw the new step.
     if (this.currentStep < this.steps.length - 1) {
+      // Move forward one step, then render it (the renderers rebuild the tool column, side panel and canvas).
       this.currentStep++;
       this._renderStep();
       Sound.play('whoosh');
@@ -128,6 +131,7 @@ const Stations = {
     // these differently), later ones neither.
     // Update step indicators
     document.querySelectorAll('#studio-steps .step').forEach((el, i) => {
+      // Clear both state classes first, then set exactly one, so the indicator never shows a stale state.
       el.classList.remove('active', 'done');
       if (i === this.currentStep) el.classList.add('active');
       else if (i < this.currentStep) el.classList.add('done');
@@ -155,15 +159,20 @@ const Stations = {
   // Step 1: choose the garment type. The tool column just shows a hint; the side panel shows a grid.
   _renderTypeStep() {
     const tools = document.getElementById('studio-tools');
+
+    // A non-interactive hint in the tool column: it reuses the .tool-btn look with an inline style (smaller font, auto height).
     tools.innerHTML = '<div class="tool-btn" style="font-size:12px;height:auto;padding:6px;">Pick a<br>Type</div>';
 
     const side = document.getElementById('studio-side');
     side.innerHTML = '<h4>Choose Garment Type</h4>';
 
+    // .item-grid fits as many 48 px cells as the 220 px side panel allows.
     const grid = document.createElement('div');
     grid.className = 'item-grid';
     GARMENT_TYPES.forEach(g => {
       const cell = document.createElement('div');
+
+      // The previously chosen garment (if any) shows as selected when the panel is rebuilt.
       cell.className = 'item-cell' + (this.garmentType === g.id ? ' active' : '');
 
       // Each cell shows the garment's SVG icon and name. (Icons.get is called directly because
@@ -193,6 +202,8 @@ const Stations = {
     const c = document.getElementById('studio-canvas');
     const ctx = c.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
+
+    // Very faint (10% white) hint text so it does not compete with the real drawing.
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
     ctx.font = '18px Outfit';
     ctx.textAlign = 'center';
@@ -212,11 +223,13 @@ const Stations = {
     // Dashed line pattern 8 px on, 6 px off, reset after stroking because it is part of the context state.
     ctx.setLineDash([8, 6]);
 
+    // The garment is centred on the canvas.
     const cx = w/2, cy = h/2;
     this._drawGarmentPath(ctx, this.garmentType, cx, cy, 1);
     ctx.stroke();
     ctx.setLineDash([]);
 
+    // The garment's name sits 30 px above the bottom edge.
     // Label
     const g = GARMENT_TYPES.find(t => t.id === this.garmentType);
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -338,6 +351,8 @@ const Stations = {
   // Step 2: choose colour and pattern.
   _renderFabricStep() {
     const tools = document.getElementById('studio-tools');
+
+    // The fabric step has no tools; the column is emptied so the previous step's buttons disappear.
     tools.innerHTML = '';
 
     const side = document.getElementById('studio-side');
@@ -348,6 +363,8 @@ const Stations = {
     const colorBtn = document.createElement('div');
     colorBtn.className = 'color-pick-btn';
     colorBtn.style.background = this.fabricColor;
+
+    // Centre the round swatch in the panel and leave 10 px below it.
     colorBtn.style.margin = '0 auto 10px';
     colorBtn.onclick = () => {
       ColorWheel.setFromHex(this.fabricColor);
@@ -361,6 +378,7 @@ const Stations = {
 
     // One cell per pattern in FABRIC_PATTERNS; picking one redraws the fabric immediately.
     // Pattern grid
+    // Heading for the pattern grid below the colour swatch.
     const label2 = document.createElement('h4');
     label2.textContent = 'Pattern';
     side.appendChild(label2);
@@ -370,6 +388,8 @@ const Stations = {
     FABRIC_PATTERNS.forEach(p => {
       const cell = document.createElement('div');
       cell.className = 'item-cell' + (this.fabricPattern === p.id ? ' active' : '');
+
+      // Pattern cells show text names, which need a smaller font than the emoji cells.
       cell.style.fontSize = '11px';
       cell.textContent = p.name;
       cell.onclick = () => {
@@ -395,6 +415,8 @@ const Stations = {
     const c = document.getElementById('studio-canvas');
     const ctx = c.getContext('2d');
     const w = c.width, h = c.height;
+
+    // Repaint from scratch: removes the earlier drawing.
     ctx.clearRect(0, 0, w, h);
 
     const cx = w/2, cy = h/2;
@@ -408,6 +430,8 @@ const Stations = {
 
     // Base color
     ctx.fillStyle = this.fabricColor;
+
+    // Fill the whole canvas; the clip set above limits the visible result to the garment's outline.
     ctx.fillRect(0, 0, w, h);
 
     // Pattern overlay
@@ -418,6 +442,7 @@ const Stations = {
     const patternColor = U.hslToHex(ph, ps, Math.max(0, pl - 20));
     const patternLight = U.hslToHex(ph, ps, Math.min(100, pl + 15));
 
+    // Default pattern colours; the light-tone patterns (floral, stars, hearts) set their own fill.
     ctx.fillStyle = patternColor;
     ctx.strokeStyle = patternColor;
 
@@ -513,6 +538,8 @@ const Stations = {
           ctx.beginPath();
           for (let x = 0; x < w; x += 15) {
             const yy = y + (x % 30 < 15 ? -6 : 6);
+
+            // The first point of each row starts the path; the rest extend it, so each row is one continuous zigzag line.
             if (x === 0) ctx.moveTo(x, yy);
             else ctx.lineTo(x, yy);
           }
@@ -524,6 +551,7 @@ const Stations = {
     // Remove the clip so the outline below is not cut off.
     ctx.restore();
 
+    // A semi-transparent white outline is drawn after the clip is removed so it is not cut in half by the clip edge.
     // Outline
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
     ctx.lineWidth = 2;
@@ -554,6 +582,7 @@ const Stations = {
 
     // Redraw the fabric, then overlay the dashed cut guide.
     // Add animated dashed outline
+    // Canvas reference for the cut guide (drawn on top of the fabric).
     const c = document.getElementById('studio-canvas');
     const ctx = c.getContext('2d');
     ctx.strokeStyle = 'rgba(255,255,255,0.8)';
@@ -573,6 +602,7 @@ const Stations = {
   // only redrawn (before Tools.setup() clears the canvas, see the note in the file overview).
   _renderDecorateStep() {
     // Save current fabric as base
+    // This reference is not used afterwards; the call is harmless.
     const c = document.getElementById('studio-canvas');
     this._drawFabric();
 
@@ -597,6 +627,8 @@ const Stations = {
       const btn = document.createElement('button');
       btn.className = 'tool-btn' + (Tools.currentTool === t.id ? ' active' : '');
       btn.innerHTML = `${Icons.get(t.icon)}<span class="tool-label">${t.label}</span>`;
+
+      // Icon above its label.
       btn.style.flexDirection = 'column';
       btn.title = t.label;
       btn.onclick = () => {
@@ -612,6 +644,8 @@ const Stations = {
     // Start with the dye (paint brush) selected and wire the canvas for mouse painting.
     Tools.currentTool = 'dye';
     Tools.setup('studio-canvas');
+
+    // Mark the first button (Dye) as selected, matching the Tools.currentTool = 'dye' set just above.
     tools.querySelector('.tool-btn').classList.add('active');
     this._updateSidePanel('dye');
   },
@@ -621,6 +655,8 @@ const Stations = {
   // @param {string} toolId - One of the ids from the tool list ('dye', 'fill', 'glitter', 'sticker', 'badge', 'pearl', 'eraser', ...).
   _updateSidePanel(toolId) {
     const side = document.getElementById('studio-side');
+
+    // Each tool shows its own controls, so the panel is rebuilt from scratch.
     side.innerHTML = '';
 
     // Tools that paint with a colour get the swatch button and a row of 12 quick colours.
@@ -642,6 +678,8 @@ const Stations = {
       // Quick colors
       const quickColors = ['#FF69B4','#FF6347','#FFD700','#32CD32','#1E90FF','#9370DB','#FF1493','#00CED1','#FFA500','#FFFFFF','#000000','#8B0000'];
       const qGrid = document.createElement('div');
+
+      // Wrapping row of 12 swatches with 4 px gaps.
       qGrid.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;';
       quickColors.forEach(c => {
         const sw = document.createElement('div');
@@ -658,6 +696,8 @@ const Stations = {
     if (['dye','glitter','pearl','spray','eraser'].includes(toolId)) {
       const h4 = document.createElement('h4');
       h4.textContent = 'Size';
+
+      // Separate the heading from the colour controls above.
       h4.style.marginTop = '10px';
       side.appendChild(h4);
 
@@ -667,6 +707,8 @@ const Stations = {
       slider.max = '30';
       slider.value = Tools.brushSize;
       slider.style.width = '100%';
+
+      // accent-color themes the native range control in the game's pink.
       slider.style.accentColor = 'var(--accent-pink)';
       slider.oninput = () => { Tools.brushSize = parseInt(slider.value); };
       side.appendChild(slider);
@@ -725,6 +767,8 @@ const Stations = {
   // Step 5: preview. It does not redraw anything; it only labels the current canvas contents.
   _renderPreviewStep() {
     const tools = document.getElementById('studio-tools');
+
+    // Hint in the tool column, like on the first step.
     tools.innerHTML = '<div class="tool-btn" style="font-size:12px;height:auto;padding:6px;">Preview</div>';
 
     const side = document.getElementById('studio-side');
@@ -737,6 +781,8 @@ const Stations = {
     const garment = GARMENT_TYPES.find(g => g.id === this.garmentType);
     if (garment) {
       ctx.fillStyle = 'rgba(255,255,255,0.15)';
+
+      // The label uses the display font at 15% white, near the bottom edge of the canvas.
       ctx.font = '16px Fredoka';
       ctx.textAlign = 'center';
       ctx.fillText(`${garment.emoji} ${garment.name} — Ready!`, c.width/2, c.height - 20);
@@ -752,6 +798,8 @@ const Stations = {
     // file in localStorage, which has a limit of about 5 MB per origin, so a large closet can eventually
     // fail to save (U.save swallows the error).
     const imageData = c.toDataURL('image/png');
+
+    // The saved item: id and createdAt are timestamps; `type: 'clothes'` is what the closet filter and customers match on; `subtype` is the garment id; `image` is the PNG data URL.
     const item = {
       // Unique id from the creation time in ms. Two items made in the same millisecond would clash (not
       // possible by hand).
@@ -828,6 +876,8 @@ const Closet = {
     // First grid cell: a line stretching across all columns showing how many items match.
     // Item count
     const countEl = document.createElement('div');
+
+    // `grid-column: 1 / -1` makes the count line span every column of the grid.
     countEl.style.cssText = 'grid-column:1/-1;text-align:center;font-size:13px;color:var(--text-muted);padding:4px;';
     const total = (Game.state.closet || []).length;
 
@@ -850,7 +900,11 @@ const Closet = {
     // One card per item.
     items.forEach((item, index) => {
       const card = document.createElement('div');
+
+      // Card styling (.closet-item) gives glass background, hover lift and a pop-in animation.
       card.className = 'closet-item';
+
+      // So the absolutely positioned type badge and delete button are placed relative to this card.
       card.style.position = 'relative';
 
       // Type badge in the corner (clothes, hair, ...).
@@ -864,6 +918,8 @@ const Closet = {
       if (item.image) {
         const img = document.createElement('img');
         img.src = item.image;
+
+        // Thumbnail 100 px tall; object-fit: contain keeps the picture's aspect ratio without cropping.
         img.style.cssText = 'width:100%;height:100px;object-fit:contain;border-radius:8px;';
         card.appendChild(img);
       } else {
@@ -883,6 +939,8 @@ const Closet = {
 
       // Delete button
       const del = document.createElement('button');
+
+      // Hidden by default (display:none) and shown only while the pointer is over the card; red, round, 20 px.
       del.style.cssText = 'position:absolute;top:6px;right:6px;background:rgba(220,20,60,0.6);border:none;color:#fff;border-radius:50%;width:20px;height:20px;font-size:10px;cursor:pointer;display:none;z-index:2;';
       del.textContent = '✕';
 
@@ -896,6 +954,8 @@ const Closet = {
         Sound.play('click');
       };
       card.appendChild(del);
+
+      // Show and hide the delete button on hover. On touch screens there is no hover, so the button cannot be reached there.
       card.onmouseenter = () => del.style.display = 'block';
       card.onmouseleave = () => del.style.display = 'none';
 
