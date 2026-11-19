@@ -39,9 +39,9 @@
 //     rather than in each station.
 //
 // Known limits / things to watch (found while reading, not changed here):
-//   - _updateCardLocks assigns an onclick that plays the error sound to locked cards and never
-//     restores the original handler, so a station that unlocks during the same page session can
-//     keep playing the error sound until the page is reloaded. [inferred from the code]
+//   - (Fixed) _updateCardLocks used to replace a locked card's onclick with an error-sound handler and never
+//     restore it, so a station that unlocked in the same page session stayed dead until reload. The original
+//     handler is now stashed on the card (card._origOnclick) and put back on unlock.
 //   - checkLevelUp() raises the level by at most one per call even if the XP would pass two
 //     thresholds.
 //   - The saved soundOn flag is never applied to Sound.enabled at start-up (see sound.js).
@@ -369,10 +369,22 @@ const Game = {
       if (card) {
         if (lvl >= reqLvl) {
           card.classList.remove('locked');
+
+          // Put the original inline handler (Game.goTo('<station>')) back if a previous call replaced it while
+          // the card was locked; without this an unlocked card kept the error handler until the page reloaded.
+          // The `in` check distinguishes "never locked" (nothing to restore) from a stashed null handler.
+          if ('_origOnclick' in card) {
+            card.onclick = card._origOnclick;
+            delete card._origOnclick;
+          }
         } else {
+          // Stash the original handler exactly once (a second locked call must not stash our own error handler).
+          // card.onclick reads back the compiled inline attribute, so no markup change is needed.
+          if (!('_origOnclick' in card)) card._origOnclick = card.onclick;
+
           // The 'locked' class dims the card and disables mouse events through CSS (pointer-events: none), so the
-          // handler below can never actually run while the card is locked; and it replaces the card's original inline
-          // onclick, which is never put back when the level rises (see the note in the file overview).
+          // handler below can never actually run while the card is locked; it only matters if CSS changes. It replaces the
+          // card's original inline onclick, which is restored above when the level rises.
           card.classList.add('locked');
           card.onclick = () => { Sound.play('error'); };
         }
